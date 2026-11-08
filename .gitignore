@@ -12,3 +12,9 @@ results/*
 !results/.gitkeep
 
 data/raw/mondial.rdf
+
+tools/
+
+data/processed/csv/
+data/processed/features_*.csv
+data/processed/ismember_masked*.csv
