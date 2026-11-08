@@ -88,4 +88,15 @@ python scripts\check_kb.py
 
 `scripts\check_kb.py` prints the counts, asserts the leakage and consistency checks, runs HermiT (owlready2, Java 17 from `DLLEARNER_JAVA_HOME` or the default Temurin folder) and loads the KB in DL-Learner with `conf/smoke_load.conf`. Options: `--kb <file>`, `--skip-hermit`, `--skip-dllearner`.
 
-Not yet implemented: the learning `.conf` files and the DL-Learner evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
+Phase 2B (one learning run and its held-out score):
+
+```powershell
+python -m src.make_conf --repeat 0 --fold 0 --algorithm celoe --time 60 --noise 0 --name demo
+powershell -ExecutionPolicy Bypass -File scripts\run_dllearner.ps1 conf\generated\demo.conf
+python scripts\score_concept.py --repeat 0 --fold 0 --concept "<learned concept>"
+python scripts\run_smoke.py
+```
+
+`src.make_conf` writes git-ignored confs to `conf/generated/` (training examples only; options on the `rho` operator: `--[no-]use-negation`, `--[no-]use-all`, `--[no-]use-cardinality`, `--[no-]use-has-value`). `scripts/score_concept.py` scores a concept on the test fold with DL-Learner's own closed world reasoner through `scripts/java/ScoreConcept.java` (compiled on first use into `tools/score_concept/`, JDK 17 needed). `scripts/run_smoke.py` reruns the four smoke configurations and rewrites `results/smoke_phase2b.md`.
+
+Not yet implemented: the full 15-fold evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.

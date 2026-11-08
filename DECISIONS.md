@@ -18,4 +18,6 @@
 - Proposed, awaiting team confirmation: country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
 - Proposed, awaiting team confirmation: organizations are individuals with a direct `isMember` role; their IRIs are `m:org_<abbrev>` because AG, C and NAM collide with country codes.
 - Proposed, awaiting team confirmation: main KB = `--membership extended --numeric discretised`, closed world reasoner; discretised means quartile bin classes (for example `PopulationQ3`, subclasses of `Country`) from `kb/bins.json`.
+- Learning confs: `src/make_conf.py` writes them from `folds.csv` (training = all folds except the test fold; test countries never appear); refinement flags (`useNegation`, `useAllConstructor`, `useCardinalityRestrictions`, `useHasValueConstructor`) are set on the `rho` operator.
+- Scoring held-out countries: `scripts/score_concept.py` evaluates the learned concept with DL-Learner's own closed world reasoner (Java `ScoreConcept` on the 1.5.0 jars, `lp.evaluate` on the test examples), so semantics match training; owlready2/HermiT (open world) is not used for scoring.
 - KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.
