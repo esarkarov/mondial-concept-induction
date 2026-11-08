@@ -182,7 +182,19 @@ def add_closure(g):
                 g.add((cell, RDF.rest, cells[i + 1] if i + 1 < len(cells) else RDF.nil))
 
 
-def build(membership, numeric, closure):
+def add_disjoint_bins(g, bins):
+    for column, entry in bins.items():
+        names = [bin_entry["class"] for bin_entry in entry["bins"]]
+        axiom = BNode(f"disjointBins_{column}")
+        cells = [BNode(f"disjointBins_{column}_{i}") for i in range(len(names))]
+        g.add((axiom, RDF.type, OWL.AllDisjointClasses))
+        g.add((axiom, OWL.members, cells[0]))
+        for i, (cell, name) in enumerate(zip(cells, names)):
+            g.add((cell, RDF.first, M[name]))
+            g.add((cell, RDF.rest, cells[i + 1] if i + 1 < len(cells) else RDF.nil))
+
+
+def build(membership, numeric, closure, disjoint=False):
     g = Graph()
     g.bind("m", M)
     names = Names()
@@ -269,6 +281,8 @@ def build(membership, numeric, closure):
 
     if closure:
         add_closure(g)
+    if disjoint:
+        add_disjoint_bins(g, bins)
     return g, bins, sizes
 
 
@@ -321,11 +335,14 @@ def main():
     parser.add_argument("--membership", choices=KB_MEMBERSHIP_VARIANTS, default="extended")
     parser.add_argument("--numeric", choices=["discretised", "datatype"], default="discretised")
     parser.add_argument("--closure", action="store_true")
+    parser.add_argument("--disjoint-bins", action="store_true")
     args = parser.parse_args()
 
-    g, bins, sizes = build(args.membership, args.numeric, args.closure)
+    if args.disjoint_bins and args.numeric != "discretised":
+        raise SystemExit("--disjoint-bins needs --numeric discretised")
+    g, bins, sizes = build(args.membership, args.numeric, args.closure, args.disjoint_bins)
     KB_DIR.mkdir(exist_ok=True)
-    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}.owl"
+    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}{'_disjoint' if args.disjoint_bins else ''}.owl"
     write_rdfxml(g, out)
     with open(KB_DIR / "bins.json", "w", encoding="utf-8") as f:
         json.dump(bins, f, indent=2)

@@ -32,7 +32,7 @@ def check(condition, message):
 
 
 def variant_of(path):
-    match = re.match(r"mondial_(masked|extended|strict|none)_(discretised|datatype)(_closure)?\.owl$", path.name)
+    match = re.match(r"mondial_(masked|extended|strict|none)_(discretised|datatype)(_closure)?(_disjoint)?\.owl$", path.name)
     check(match is not None, f"unexpected KB file name: {path.name}")
     return match.group(1)
 
