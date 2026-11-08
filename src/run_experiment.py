@@ -42,14 +42,16 @@ def read_csv(path):
 
 
 def kb_path(args):
-    return KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}.owl"
+    suffix = ("_closure" if args.closure else "") + ("_disjoint" if args.disjoint_bins else "")
+    return KB_DIR / f"mondial_{args.membership}_{args.numeric}{suffix}.owl"
 
 
 def ensure_kb(args):
     path = kb_path(args)
     if not path.exists():
         command = [sys.executable, "-m", "src.kb", "--membership", args.membership, "--numeric", args.numeric]
-        subprocess.run(command + (["--closure"] if args.closure else []), check=True, cwd=ROOT, capture_output=True, text=True)
+        command += (["--closure"] if args.closure else []) + (["--disjoint-bins"] if args.disjoint_bins else [])
+        subprocess.run(command, check=True, cwd=ROOT, capture_output=True, text=True)
     return path
 
 
@@ -198,6 +200,7 @@ def main():
     parser.add_argument("--max-depth", type=float, default=None)
     parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
     parser.add_argument("--closure", action="store_true")
+    parser.add_argument("--disjoint-bins", action="store_true")
     parser.add_argument("--repeats")
     parser.add_argument("--folds")
     parser.add_argument("--workers", type=int, default=1)

@@ -16,9 +16,10 @@ OVERRUN_SECONDS = 5
 NUMERIC_SHORT = {"discretised": "disc", "datatype": "dt"}
 
 
-def config(label, algorithm, has_value, noise, membership="strict", numeric="discretised", reasoner="cwr", closure=False):
+def config(label, algorithm, has_value, noise, membership="strict", numeric="discretised", reasoner="cwr", closure=False,
+           disjoint=False):
     return {"label": label, "algorithm": algorithm, "has_value": has_value, "noise": noise,
-            "membership": membership, "numeric": numeric, "reasoner": reasoner, "closure": closure}
+            "membership": membership, "numeric": numeric, "reasoner": reasoner, "closure": closure, "disjoint": disjoint}
 
 
 SUITES = {
@@ -48,6 +49,7 @@ SUITES = {
         "configs": [
             config("O1", "celoe", True, 0, reasoner="pellet"),
             config("O2", "celoe", True, 0, reasoner="pellet", closure=True),
+            config("O3", "celoe", True, 0, reasoner="pellet", closure=True, disjoint=True),
         ],
         "report": RESULTS_DIR / "grid_owa.md",
         "title": "OWA vs CWA (CELOE, strict KB, discretised, hasValue on, noise 0, 60 s, Pellet via the OWL API reasoner); G1 is the reference row",
@@ -59,7 +61,8 @@ SUITES = {
 def config_name(c):
     return (f"{c['label']}_{c['algorithm']}_{c['membership']}_{NUMERIC_SHORT[c['numeric']]}"
             f"_hv{int(c['has_value'])}_n{c['noise']}"
-            + ("" if c["reasoner"] == "cwr" else f"_{c['reasoner']}") + ("_closure" if c["closure"] else ""))
+            + ("" if c["reasoner"] == "cwr" else f"_{c['reasoner']}") + ("_closure" if c["closure"] else "")
+            + ("_disjoint" if c["disjoint"] else ""))
 
 
 def run_config(c, repeats=None):
@@ -71,6 +74,8 @@ def run_config(c, repeats=None):
     ]
     if c["closure"]:
         command.append("--closure")
+    if c["disjoint"]:
+        command.append("--disjoint-bins")
     if repeats:
         command += ["--repeats", repeats]
     start = time.time()
@@ -147,7 +152,7 @@ def load_rows(configs, folds):
 
 
 def write_report(suite_name):
-    from src.grid_extras import census_lines, ocel_sensitivity_lines
+    from src.grid_extras import census_lines, diagnostic_lines, ocel_sensitivity_lines
     suite = SUITES[suite_name]
     folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
     rows = load_rows(suite["configs"], folds)
@@ -169,6 +174,9 @@ def write_report(suite_name):
     if suite_name == "main":
         lines += ["", "## OCEL rule sensitivity", ""]
         lines += ocel_sensitivity_lines()
+    if suite_name == "owa":
+        lines += ["", "## Diagnostic run (not part of the grid)", ""]
+        lines += diagnostic_lines()
     lines += ["", "## Per-config details", ""]
     for name, runs, _ in rows:
         lines += details(name, runs, TIME_LIMIT)
