@@ -9,7 +9,7 @@ import pandas as pd
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
 
-from src.config import KB_DIR, MASK_EXTENDED, MASKED_ORGANIZATIONS, PROCESSED_DIR
+from src.config import KB_DIR, KB_MEMBERSHIP_VARIANTS, PROCESSED_DIR, STRICT_EXTRA
 
 CSV_DIR = PROCESSED_DIR / "csv"
 BASE = "http://example.org/mondial#"
@@ -33,6 +33,7 @@ MAIN_ROLES = {"mainLanguage": "speaks", "mainReligion": "follows", "mainEthnicGr
 ISMEMBER_FILES = {
     "masked": PROCESSED_DIR / "ismember_masked.csv",
     "extended": PROCESSED_DIR / "ismember_masked_extended.csv",
+    "strict": PROCESSED_DIR / "ismember_masked_extended.csv",
     "none": None,
 }
 
@@ -218,6 +219,8 @@ def build(membership, numeric, closure):
     path = ISMEMBER_FILES[membership]
     if path is not None:
         ismember = pd.read_csv(path, dtype=str, keep_default_na=False)
+        if membership == "strict":
+            ismember = ismember[~ismember["Organization"].isin(STRICT_EXTRA)]
         for code, org in ismember[["Country", "Organization"]].drop_duplicates().itertuples(index=False):
             org_iri = declare(names.iri(local_name("org_", org), f"organization:{org}"), "Organization")
             g.add((country_iri[code], M.isMember, org_iri))
@@ -293,7 +296,7 @@ def write_rdfxml(g, path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--membership", choices=["masked", "extended", "none"], default="extended")
+    parser.add_argument("--membership", choices=KB_MEMBERSHIP_VARIANTS, default="extended")
     parser.add_argument("--numeric", choices=["discretised", "datatype"], default="discretised")
     parser.add_argument("--closure", action="store_true")
     args = parser.parse_args()

@@ -25,3 +25,7 @@ kb/*.owl
 conf/generated/
 results/smoke_logs/
 !results/smoke_phase2b.md
+
+!results/runs/
+results/runs/*
+!results/runs/*.csv

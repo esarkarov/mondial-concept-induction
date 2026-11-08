@@ -42,6 +42,29 @@ MASK_EXTENDED = MASKED_ORGANIZATIONS + [
     "BSEC",
 ]
 
+STRICT_EXTRA = [
+    "AG",
+    "IAEA",
+    "ICC",
+    "ICCt",
+    "IFRCS",
+    "IOC",
+    "IOM",
+    "IPU",
+    "ISO",
+    "Interpol",
+    "NSG",
+    "OAS",
+    "OPCW",
+    "PCA",
+    "UN",
+    "UNESCO",
+    "WCO",
+    "WTO",
+]
+
+KB_MEMBERSHIP_VARIANTS = ("masked", "extended", "strict", "none")
+
 LABEL_SET = "sovereign"
 LABEL_SETS = ("all", "sovereign")
 

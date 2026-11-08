@@ -13,12 +13,17 @@ sys.path.insert(0, str(ROOT))
 import owlready2
 from rdflib import Graph
 
-from src.config import EU_ORGANIZATION, MASK_EXTENDED, MASKED_ORGANIZATIONS
+from src.config import EU_ORGANIZATION, MASK_EXTENDED, MASKED_ORGANIZATIONS, STRICT_EXTRA
 
 DEFAULT_KB = ROOT / "kb" / "mondial_extended_discretised.owl"
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot"
 FORBIDDEN_EXACT = {"eu", "org_eu", "eumember", "eumembers", "eucandidate", "eucandidates", "candidate", "candidates"}
-REMOVED_BY_VARIANT = {"masked": MASKED_ORGANIZATIONS, "extended": MASK_EXTENDED, "none": []}
+REMOVED_BY_VARIANT = {
+    "masked": MASKED_ORGANIZATIONS,
+    "extended": MASK_EXTENDED,
+    "strict": MASK_EXTENDED + STRICT_EXTRA,
+    "none": [],
+}
 
 
 def check(condition, message):
@@ -27,7 +32,7 @@ def check(condition, message):
 
 
 def variant_of(path):
-    match = re.match(r"mondial_(masked|extended|none)_(discretised|datatype)\.owl$", path.name)
+    match = re.match(r"mondial_(masked|extended|strict|none)_(discretised|datatype)\.owl$", path.name)
     check(match is not None, f"unexpected KB file name: {path.name}")
     return match.group(1)
 
