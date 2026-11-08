@@ -13,6 +13,7 @@
 - DL-Learner 1.5.0 runs on Java 17 with `--add-opens java.base/java.lang.invoke=ALL-UNNAMED` and `--add-opens java.base/java.lang=ALL-UNNAMED`.
 - Algorithms: CELOE and OCEL are present in the distribution; ParCEL is not (PCELOE is).
 - Reasoner: `closed world reasoner` (Pellet underneath), as in the shipped `father.conf`.
-- Proposed, not confirmed: airports are left out of the knowledge base.
+- Confirmed by team: airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
+- Confirmed by team: flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
 - Proposed, not confirmed: country-code IRIs (for example `mondial:GR`) for countries.
 - Proposed, not confirmed: organizations are modelled as individuals.
