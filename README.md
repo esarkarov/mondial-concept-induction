@@ -40,12 +40,18 @@ pip install -r requirements.txt
 
 On Linux/macOS, activate with `source .venv/bin/activate`.
 
-## DL-Learner and Java
+## Running DL-Learner
 
-Not installed by this skeleton.
+- Release: DL-Learner 1.5.0, asset `dllearner-1.5.0.zip` from <https://github.com/SmartDataAnalytics/DL-Learner/releases>. Extract it into `tools/dl-learner/` so the launcher is `tools/dl-learner/dllearner-1.5.0/bin/cli.bat`. `tools/` is git-ignored.
+- Java: 17 (Temurin 17.0.20.1 was used). Its `INSTALL` file says Java 7 is required, but the release fails at startup on Java 17 without the flags below. Java 25 was not tested.
+- Flags: `--add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED`, passed through `JAVA_OPTS`. Removing either one made `examples/father.conf` fail.
+- Script: `scripts/run_dllearner.ps1` sets `JAVA_HOME`, `PATH` and `JAVA_OPTS` for its own process only, then calls `cli.bat`.
 
-- Java: TODO confirm the required version. OpenJDK 25.0.5 is present on the setup machine, but compatibility with DL-Learner is not verified.
-- DL-Learner: TODO pin the exact release, download URL and install location.
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_dllearner.ps1 conf\my_problem.conf
+```
+
+Extra arguments after the conf path are passed to `cli.bat`. The default Java is `C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot`; set the environment variable `DLLEARNER_JAVA_HOME` to use another JDK 17 folder. DL-Learner writes `log/error.log` inside the extracted folder.
 
 ## How to run
 
