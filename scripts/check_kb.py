@@ -32,7 +32,7 @@ def check(condition, message):
 
 
 def variant_of(path):
-    match = re.match(r"mondial_(masked|extended|strict|none)_(discretised|datatype)\.owl$", path.name)
+    match = re.match(r"mondial_(masked|extended|strict|none)_(discretised|datatype)(_closure)?\.owl$", path.name)
     check(match is not None, f"unexpected KB file name: {path.name}")
     return match.group(1)
 
@@ -42,7 +42,7 @@ def report_counts(onto):
     roles = Counter()
     for individual in onto.individuals():
         for cls in individual.is_a:
-            classes[cls.name] += 1
+            classes[getattr(cls, "name", "(class expression)")] += 1
         for prop in individual.get_properties():
             roles[prop.name] += len(prop[individual])
     print("individuals per class:")

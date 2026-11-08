@@ -156,8 +156,30 @@ def add_tbox(g, numeric_mode, bins):
                 g.add((M[entry["class"]], RDFS.subClassOf, M.Country))
 
 
+CLOSURE_ROLES = ["neighbor", "speaks", "follows", "borderedBySea", "hasEthnicGroup", "hasAirport", "isMember"]
+
+
 def add_closure(g):
-    raise SystemExit("--closure is not implemented yet: no closure axioms were added")
+    countries = sorted(g.subjects(RDF.type, M.Country), key=str)
+    for country in countries:
+        code = str(country)[len(BASE):]
+        for role in CLOSURE_ROLES:
+            fillers = sorted(g.objects(country, M[role]), key=str)
+            restriction = BNode(f"closure_{code}_{role}")
+            g.add((country, RDF.type, restriction))
+            g.add((restriction, RDF.type, OWL.Restriction))
+            g.add((restriction, OWL.onProperty, M[role]))
+            if not fillers:
+                g.add((restriction, OWL.allValuesFrom, OWL.Nothing))
+                continue
+            values = BNode(f"closure_{code}_{role}_set")
+            cells = [BNode(f"closure_{code}_{role}_{i}") for i in range(len(fillers))]
+            g.add((restriction, OWL.allValuesFrom, values))
+            g.add((values, RDF.type, OWL.Class))
+            g.add((values, OWL.oneOf, cells[0]))
+            for i, (cell, filler) in enumerate(zip(cells, fillers)):
+                g.add((cell, RDF.first, filler))
+                g.add((cell, RDF.rest, cells[i + 1] if i + 1 < len(cells) else RDF.nil))
 
 
 def build(membership, numeric, closure):
@@ -303,7 +325,7 @@ def main():
 
     g, bins, sizes = build(args.membership, args.numeric, args.closure)
     KB_DIR.mkdir(exist_ok=True)
-    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}.owl"
+    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}.owl"
     write_rdfxml(g, out)
     with open(KB_DIR / "bins.json", "w", encoding="utf-8") as f:
         json.dump(bins, f, indent=2)

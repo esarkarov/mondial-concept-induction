@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.config import PROCESSED_DIR
+from src.make_conf import REASONERS, reasoner_lines
 
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot"
 DL_HOME = ROOT / "tools" / "dl-learner" / "dllearner-1.5.0"
@@ -42,8 +43,8 @@ def compile_if_needed():
         raise RuntimeError(f"javac failed:\n{result.stdout}\n{result.stderr}")
 
 
-def write_conf(kb, positives, negatives):
-    key = hashlib.sha1(("|".join(positives) + "#" + "|".join(negatives) + str(kb)).encode()).hexdigest()[:10]
+def write_conf(kb, positives, negatives, reasoner="cwr"):
+    key = hashlib.sha1(("|".join(positives) + "#" + "|".join(negatives) + str(kb) + reasoner).encode()).hexdigest()[:10]
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
     path = GENERATED_DIR / f"score_{key}.conf"
     block = lambda codes: "{ " + ", ".join(f'"m:{c}"' for c in codes) + " }"
@@ -52,8 +53,7 @@ def write_conf(kb, positives, negatives):
             'prefixes = [ ("m","http://example.org/mondial#") ]',
             'ks.type = "OWL File"',
             f'ks.fileName = "{Path(kb).resolve().as_posix()}"',
-            'reasoner.type = "closed world reasoner"',
-            "reasoner.sources = { ks }",
+            *reasoner_lines(reasoner),
             'lp.type = "posNegStandard"',
             f"lp.positiveExamples = {block(positives)}",
             f"lp.negativeExamples = {block(negatives)}",
@@ -93,8 +93,8 @@ def metrics(tp, fp, fn, tn):
             "tp": tp, "fp": fp, "fn": fn, "tn": tn}
 
 
-def score(kb, concept, positives, negatives):
-    entry = run_java(write_conf(kb, positives, negatives), kb, [concept])["single"]
+def score(kb, concept, positives, negatives, reasoner="cwr"):
+    entry = run_java(write_conf(kb, positives, negatives, reasoner), kb, [concept])["single"]
     if "SCORE_ERROR" in entry:
         raise RuntimeError(entry["SCORE_ERROR"])
     sets = {key: set(entry[f"SCORE_{key}"].split()) for key in ("TP", "FP", "FN", "TN")}
@@ -124,17 +124,18 @@ def test_examples(repeat, fold):
 def batch_score(items):
     positives, negatives = labelled_examples()
     results = [None] * len(items)
-    by_kb = {}
+    groups = {}
     for index, item in enumerate(items):
-        by_kb.setdefault(str(Path(item["kb"]).resolve()), []).append(index)
-    for kb, indices in by_kb.items():
+        key = (str(Path(item["kb"]).resolve()), item.get("reasoner") or "cwr")
+        groups.setdefault(key, []).append(index)
+    for (kb, reasoner), indices in groups.items():
         GENERATED_DIR.mkdir(parents=True, exist_ok=True)
-        key = hashlib.sha1((kb + "".join(items[i]["concept"] for i in indices)).encode()).hexdigest()[:10]
+        key = hashlib.sha1((kb + reasoner + "".join(items[i]["concept"] for i in indices)).encode()).hexdigest()[:10]
         batch_file = GENERATED_DIR / f"batch_{key}.tsv"
         batch_file.write_text(
             "".join(f"{i}\t{items[i]['concept']}\n" for i in indices), encoding="utf-8", newline="\n"
         )
-        entries = run_java(write_conf(kb, positives, negatives), kb, ["--batch", str(batch_file)])
+        entries = run_java(write_conf(kb, positives, negatives, reasoner), kb, ["--batch", str(batch_file)])
         for i in indices:
             entry = entries[str(i)]
             if "SCORE_ERROR" in entry:
@@ -167,12 +168,14 @@ def main():
     parser.add_argument("--fold", type=int)
     parser.add_argument("--items", type=Path)
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
     args = parser.parse_args()
 
     if args.items:
         items = load_items(args.items)
         for item in items:
             item.setdefault("kb", str(args.kb))
+            item.setdefault("reasoner", args.reasoner)
         results = batch_score(items)
         rows = []
         for item, result in zip(items, results):
@@ -188,7 +191,7 @@ def main():
         return
 
     positives, negatives = test_examples(args.repeat, args.fold)
-    print(json.dumps(score(args.kb, args.concept, positives, negatives), indent=2))
+    print(json.dumps(score(args.kb, args.concept, positives, negatives, args.reasoner), indent=2))
 
 
 if __name__ == "__main__":

@@ -26,6 +26,18 @@ def flag(value):
     return "true" if value else "false"
 
 
+REASONERS = ("cwr", "pellet")
+
+
+def reasoner_lines(reasoner):
+    if reasoner == "cwr":
+        return ['reasoner.type = "closed world reasoner"', "reasoner.sources = { ks }"]
+    if reasoner == "pellet":
+        return ['reasoner.type = "OWL API Reasoner"', "reasoner.sources = { ks }",
+                'reasoner.reasonerImplementation = "pellet"']
+    raise ValueError(f"unknown reasoner {reasoner}")
+
+
 def render(args, kb_relative):
     positives, negatives = training_examples(args.repeat, args.fold)
     lines = [
@@ -34,8 +46,7 @@ def render(args, kb_relative):
         'ks.type = "OWL File"',
         f'ks.fileName = "{kb_relative}"',
         "",
-        'reasoner.type = "closed world reasoner"',
-        "reasoner.sources = { ks }",
+        *reasoner_lines(getattr(args, "reasoner", "cwr")),
         "",
         'lp.type = "posNegStandard"',
         f"lp.positiveExamples = {examples_block(positives)}",
@@ -61,6 +72,7 @@ def default_name(args, kb):
         f"r{args.repeat}_f{args.fold}_{args.algorithm}_{kb.stem.replace('mondial_', '')}"
         f"_t{args.time}_n{args.noise:g}_hv{int(args.use_has_value)}"
         + ("" if args.max_depth is None else f"_d{args.max_depth:g}")
+        + ("" if args.reasoner == "cwr" else f"_{args.reasoner}")
     )
 
 
@@ -77,6 +89,7 @@ def main():
     parser.add_argument("--use-cardinality", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--use-has-value", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--max-depth", type=float, default=None)
+    parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
     parser.add_argument("--name")
     args = parser.parse_args()
 
