@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+results/*
+!results/.gitkeep
+
+data/raw/mondial.rdf

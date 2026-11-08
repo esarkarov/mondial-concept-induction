@@ -1,0 +1,6 @@
+pandas==3.1.1
+numpy==2.5.4
+scikit-learn==1.9.1
+rdflib==7.6.0
+owlready2==0.51
+pytest==9.2.0
