@@ -27,6 +27,8 @@ PAIRS = [
     ("G1", "G5"), ("G3", "G7"),
     (RANDOM_FOREST, TREE_FULL),
     ("A1", "G1"), ("A2", "G1"), ("A3", "G1"),
+    ("O1", "G1"), ("O2", "G1"), ("O2", "O1"),
+    ("A4", "G1"), ("A4", "A3"),
 ]
 
 
@@ -34,9 +36,11 @@ def matrices(predictions, config):
     part = predictions[predictions["config"] == config].sort_values(["repeat", "code"])
     if part.empty:
         return None
-    y = np.stack([g["label"].to_numpy() for _, g in part.groupby("repeat")])
-    p = np.stack([g["predicted"].to_numpy() for _, g in part.groupby("repeat")])
-    return y, p
+    return {repeat: (g["label"].to_numpy(), g["predicted"].to_numpy()) for repeat, g in part.groupby("repeat")}
+
+
+def stack(by_repeat, repeats):
+    return (np.stack([by_repeat[r][0] for r in repeats]), np.stack([by_repeat[r][1] for r in repeats]))
 
 
 def f1_resampled(y, p, indices):
@@ -62,20 +66,24 @@ def main():
         f"{N_RESAMPLES} resamples of the {n} labelled countries (seed {SEED}); the same indices are used for both models and all repeats. "
         f"For each resample the F1 is computed per repeat ({FOLD_REPEATS} repeats) from the pooled out-of-fold predictions, averaged over repeats, "
         "and the difference first minus second is taken. Interval = 2.5th and 97.5th percentile of the differences.", "",
-        "| first | second | point difference | mean difference | 95% interval | contains 0 |",
-        "|---|---|---|---|---|---|",
+        "Where one model has fewer repeats, both are compared on the repeats they share (column `repeats`).", "",
+        "| first | second | repeats | point difference | mean difference | 95% interval | contains 0 |",
+        "|---|---|---|---|---|---|---|",
     ]
     for first, second in PAIRS:
         a, b = name_of(first), name_of(second)
-        ma, mb = matrices(predictions, a), matrices(predictions, b)
-        if ma is None or mb is None:
-            lines.append(f"| {a} | {b} | missing predictions | | | |")
+        ra, rb = matrices(predictions, a), matrices(predictions, b)
+        if ra is None or rb is None:
+            lines.append(f"| {a} | {b} | | missing predictions | | | |")
             continue
+        shared = sorted(set(ra) & set(rb))
+        ma, mb = stack(ra, shared), stack(rb, shared)
         assert (ma[0] == mb[0]).all()
         diff = f1_resampled(*ma, indices).mean(axis=0) - f1_resampled(*mb, indices).mean(axis=0)
         low, high = np.percentile(diff, [2.5, 97.5])
         point = mean_f1(*ma) - mean_f1(*mb)
-        lines.append(f"| {a} | {b} | {point:+.3f} | {diff.mean():+.3f} | [{low:+.3f}, {high:+.3f}] | {'yes' if low <= 0 <= high else 'no'} |")
+        used = ",".join(str(r) for r in shared) + (" only" if len(shared) < FOLD_REPEATS else "")
+        lines.append(f"| {a} | {b} | {used} | {point:+.3f} | {diff.mean():+.3f} | [{low:+.3f}, {high:+.3f}] | {'yes' if low <= 0 <= high else 'no'} |")
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 

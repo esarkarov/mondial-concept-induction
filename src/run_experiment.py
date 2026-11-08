@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from score_concept import batch_score
 from src.config import FOLD_REPEATS, KB_DIR, KB_MEMBERSHIP_VARIANTS, N_FOLDS, PROCESSED_DIR
-from src.make_conf import GENERATED_DIR, render
+from src.make_conf import GENERATED_DIR, REASONERS, render
 
 RUNS_DIR = ROOT / "results" / "runs"
 WRAPPER = ROOT / "scripts" / "run_dllearner.ps1"
@@ -42,16 +42,14 @@ def read_csv(path):
 
 
 def kb_path(args):
-    return KB_DIR / f"mondial_{args.membership}_{args.numeric}.owl"
+    return KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}.owl"
 
 
 def ensure_kb(args):
     path = kb_path(args)
     if not path.exists():
-        subprocess.run(
-            [sys.executable, "-m", "src.kb", "--membership", args.membership, "--numeric", args.numeric],
-            check=True, cwd=ROOT, capture_output=True, text=True,
-        )
+        command = [sys.executable, "-m", "src.kb", "--membership", args.membership, "--numeric", args.numeric]
+        subprocess.run(command + (["--closure"] if args.closure else []), check=True, cwd=ROOT, capture_output=True, text=True)
     return path
 
 
@@ -97,6 +95,7 @@ def learn(args, repeat, fold, run_dir):
     conf_args = SimpleNamespace(
         repeat=repeat, fold=fold, algorithm=args.algorithm, time=args.time, noise=args.noise,
         use_negation=True, use_all=True, use_cardinality=True, use_has_value=args.has_value, max_depth=args.max_depth,
+        reasoner=args.reasoner,
     )
     text, _, _ = render(conf_args, Path("..", "..", "kb", kb_path(args).name).as_posix())
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -156,8 +155,8 @@ def append_rows(csv_path, rows):
 
 
 def score_finished(args, states, csv_path, references):
-    items = [{"kb": str(kb_path(args)), "repeat": s["repeat"], "fold": s["fold"], "concept": s["top"][0]["concept"]}
-             for s in states]
+    items = [{"kb": str(kb_path(args)), "repeat": s["repeat"], "fold": s["fold"], "concept": s["top"][0]["concept"],
+              "reasoner": args.reasoner} for s in states]
     results = batch_score(items)
     rows = []
     for state, result in zip(states, results):
@@ -197,6 +196,8 @@ def main():
     parser.add_argument("--noise", type=float, default=0.0)
     parser.add_argument("--time", type=int, default=60)
     parser.add_argument("--max-depth", type=float, default=None)
+    parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
+    parser.add_argument("--closure", action="store_true")
     parser.add_argument("--repeats")
     parser.add_argument("--folds")
     parser.add_argument("--workers", type=int, default=1)

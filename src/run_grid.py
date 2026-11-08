@@ -16,9 +16,9 @@ OVERRUN_SECONDS = 5
 NUMERIC_SHORT = {"discretised": "disc", "datatype": "dt"}
 
 
-def config(label, algorithm, has_value, noise, membership="strict", numeric="discretised"):
+def config(label, algorithm, has_value, noise, membership="strict", numeric="discretised", reasoner="cwr", closure=False):
     return {"label": label, "algorithm": algorithm, "has_value": has_value, "noise": noise,
-            "membership": membership, "numeric": numeric}
+            "membership": membership, "numeric": numeric, "reasoner": reasoner, "closure": closure}
 
 
 SUITES = {
@@ -44,21 +44,35 @@ SUITES = {
         "title": "Ablations (CELOE, hasValue on, noise 0, 60 s, 3 workers, repeats 0 to 2); G1 is the reference row",
         "baseline_variants": ["masked", "extended", "none", "strict", "reference"],
     },
+    "owa": {
+        "configs": [
+            config("O1", "celoe", True, 0, reasoner="pellet"),
+            config("O2", "celoe", True, 0, reasoner="pellet", closure=True),
+        ],
+        "report": RESULTS_DIR / "grid_owa.md",
+        "title": "OWA vs CWA (CELOE, strict KB, discretised, hasValue on, noise 0, 60 s, Pellet via the OWL API reasoner); G1 is the reference row",
+        "baseline_variants": ["strict", "reference"],
+    },
 }
 
 
 def config_name(c):
     return (f"{c['label']}_{c['algorithm']}_{c['membership']}_{NUMERIC_SHORT[c['numeric']]}"
-            f"_hv{int(c['has_value'])}_n{c['noise']}")
+            f"_hv{int(c['has_value'])}_n{c['noise']}"
+            + ("" if c["reasoner"] == "cwr" else f"_{c['reasoner']}") + ("_closure" if c["closure"] else ""))
 
 
-def run_config(c):
+def run_config(c, repeats=None):
     command = [
         sys.executable, "-m", "src.run_experiment", "--name", config_name(c), "--algorithm", c["algorithm"],
         "--membership", c["membership"], "--numeric", c["numeric"],
         "--has-value" if c["has_value"] else "--no-has-value", "--noise", str(c["noise"]),
-        "--time", str(TIME_LIMIT), "--workers", str(WORKERS),
+        "--time", str(TIME_LIMIT), "--workers", str(WORKERS), "--reasoner", c["reasoner"],
     ]
+    if c["closure"]:
+        command.append("--closure")
+    if repeats:
+        command += ["--repeats", repeats]
     start = time.time()
     print(f"[{time.strftime('%H:%M:%S')}] {config_name(c)} ...", flush=True)
     subprocess.run(command, cwd=ROOT, check=False)
@@ -137,7 +151,7 @@ def write_report(suite_name):
     suite = SUITES[suite_name]
     folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
     rows = load_rows(suite["configs"], folds)
-    if suite_name == "ablations":
+    if suite_name in ("ablations", "owa"):
         rows = load_rows(SUITES["main"]["configs"][:1], folds) + rows
     lines = [
         f"# {suite['title']}", "",
@@ -167,12 +181,13 @@ def main():
     parser.add_argument("--suite", choices=list(SUITES), default="main")
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--only")
+    parser.add_argument("--repeats")
     args = parser.parse_args()
     if not args.report_only:
         start = time.time()
         for c in SUITES[args.suite]["configs"]:
             if args.only is None or c["label"] in args.only.split(","):
-                run_config(c)
+                run_config(c, args.repeats)
         print(f"grid finished in {(time.time() - start) / 60:.1f} min", flush=True)
     write_report(args.suite)
 

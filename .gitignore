@@ -36,3 +36,5 @@ results/runs/*
 !results/compare.md
 !results/ocel_alt.csv
 !results/ocel_alt_summary.csv
+
+!results/grid_owa.md
