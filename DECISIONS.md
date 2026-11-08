@@ -22,4 +22,6 @@
 - Learned concept per fold: CELOE = first entry of its solution list; OCEL = highest training accuracy among everything it reports (printed list and improvements), ties to the shorter one; set before the main grid.
 - Main grid (fixed before running, results in `results/grid_main.md`): CELOE and OCEL x hasValue on/off x noise 0/10 on the strict discretised KB, 60 s, 3 workers, repeats 0 to 2 (`src/run_grid.py`).
 - Phase 3C (fixed before running): ablations A1 extended, A2 masked, A3 none, A4 strict + datatype restrictions (CELOE, hasValue on, noise 0, 60 s); OCEL sensitivity = first listed entry; paired bootstrap = 1000 resamples of the 194 countries, seed 42, shared indices, F1 averaged over repeats; pairs listed in `src/compare.py`.
+- Phase 3D: `--reasoner {cwr,pellet}` for training and scoring; `--closure` adds `only {fillers}` class assertions for 7 country roles; O1 (Pellet) and O2 (Pellet + closure) ran on repeat 0 only because Pellet tested under 1,000 descriptions in 60 s (rule fixed in advance).
+- Note: in DL-Learner 1.5.0 the closed world reasoner treated `max n` as at most n+1 in probes against the CSVs (`min n` was exact); no learned concept in G1 to G8, A1 to A4 contains `max`.
 - KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.

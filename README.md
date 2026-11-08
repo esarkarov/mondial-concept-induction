@@ -132,4 +132,15 @@ python -m src.run_grid --suite ablations --report-only
 
 `--suite ablations` runs A1 (extended KB), A2 (masked), A3 (none) and A4 (strict with datatype restrictions) with CELOE, hasValue on, noise 0, and writes `results/grid_ablations.md`. `src.ocel_sensitivity` rescored G5 to G8 with OCEL's first listed entry (`results/ocel_alt*.csv`). `src.export_predictions` writes `results/predictions.csv` (git-ignored; learned configs from the run CSVs, strict baselines refitted with the same seeds and checked against `results/baselines.csv`). `src.compare` writes `results/compare.md` (paired bootstrap).
 
+Phase 3D (open vs closed world):
+
+```powershell
+python -m src.kb --membership strict --closure
+python -m src.make_conf --repeat 0 --fold 0 --algorithm celoe --reasoner pellet --use-has-value --name demo_pellet
+python scripts\score_concept.py --reasoner pellet --kb kb\mondial_strict_discretised_closure.owl --repeat 0 --fold 0 --concept "encompassed value cont_Europe"
+python -m src.run_grid --suite owa --repeats 0
+```
+
+`--reasoner {cwr,pellet}` (`make_conf`, `score_concept`, `run_experiment`) selects DL-Learner's `closed world reasoner` or the `OWL API Reasoner` with Pellet (open world); training and scoring use the same one. `--closure` in `src.kb` adds, for every country and each of neighbor, speaks, follows, borderedBySea, hasEthnicGroup, hasAirport and isMember, a class assertion `only {fillers}` (`owl:Nothing` when there are none) and writes `kb/mondial_<membership>_<numeric>_closure.owl` (git-ignored). `--suite owa` runs O1 (Pellet, normal KB) and O2 (Pellet, closure KB) and writes `results/grid_owa.md`.
+
 `src.run_grid` runs the eight configurations G1 to G8 in sequence (about 50 minutes with 3 workers), resumes finished folds, and writes `results/grid_main.md` from `results/runs/G*.csv` and `results/baselines.csv`. `baselines.run_baselines` now also covers the `strict` variant (`features_strict.csv`). DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
