@@ -69,7 +69,7 @@ LABEL_SET = "sovereign"
 LABEL_SETS = ("all", "sovereign")
 
 MEMBERSHIP_VARIANT = "masked"
-MEMBERSHIP_VARIANTS = ("masked", "extended", "none")
+MEMBERSHIP_VARIANTS = ("masked", "extended", "none", "strict")
 
 EU_ORGANIZATION = "EU"
 EU_MEMBERSHIP_TYPE = "member"

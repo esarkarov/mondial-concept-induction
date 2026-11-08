@@ -1,13 +1,14 @@
 import numpy as np
 import pandas as pd
 
-from src.config import MEMBERSHIP_VARIANTS, PROCESSED_DIR
+from src.config import MEMBERSHIP_VARIANTS, PROCESSED_DIR, STRICT_EXTRA
 from src.labels import read
 
 ISMEMBER_FILES = {
     "masked": PROCESSED_DIR / "ismember_masked.csv",
     "extended": PROCESSED_DIR / "ismember_masked_extended.csv",
     "none": None,
+    "strict": PROCESSED_DIR / "ismember_masked_extended.csv",
 }
 
 MIN_CATEGORY = 5
@@ -130,7 +131,10 @@ def main():
         features = base
         path = ISMEMBER_FILES[variant]
         if path is not None:
-            features = base.join(organization_columns(codes, read_path(path)))
+            ismember = read_path(path)
+            if variant == "strict":
+                ismember = ismember[~ismember["Organization"].isin(STRICT_EXTRA)]
+            features = base.join(organization_columns(codes, ismember))
         out = features.reset_index(names="code").merge(labels[["code", "label"]], on="code")
         out = out[["code", "label"] + [c for c in features.columns]]
         out.to_csv(PROCESSED_DIR / f"features_{variant}.csv", index=False)

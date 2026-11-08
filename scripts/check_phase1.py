@@ -55,7 +55,7 @@ def check_ismember():
 
 
 def check_features():
-    expected = {"masked": 156, "extended": 146, "none": 0}
+    expected = {"masked": 156, "extended": 146, "none": 0, "strict": 128}
     for variant, org_columns in expected.items():
         features = pd.read_csv(PROCESSED_DIR / f"features_{variant}.csv")
         check(len(features) == 194, f"features_{variant} rows: {len(features)}")
