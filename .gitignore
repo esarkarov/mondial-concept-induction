@@ -21,3 +21,7 @@ data/processed/ismember_masked*.csv
 
 kb/*.owl
 !kb/mondial_extended_discretised.owl
+
+conf/generated/
+results/smoke_logs/
+!results/smoke_phase2b.md
