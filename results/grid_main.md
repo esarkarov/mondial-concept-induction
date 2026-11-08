@@ -15,7 +15,7 @@ Per-fold columns: mean over the folds of a repeat, then mean ± std over repeats
 | G7_ocel_strict_disc_hv0_n0 | 15/15 | 0.904 ± 0.025 | 0.663 ± 0.084 | 0.731 ± 0.106 | 0.679 ± 0.081 | 0.678 [0.526, 0.804] | 23.7 | 107354 | 60.0 |
 | G8_ocel_strict_disc_hv0_n10 | 15/15 | 0.919 ± 0.026 | 0.796 ± 0.163 | 0.604 ± 0.074 | 0.670 ± 0.103 | 0.678 [0.504, 0.814] | 10.3 | 169757 | 60.0 |
 
-## Baselines on the strict variant (same folds)
+## Baselines (same folds)
 
 The rule rows use the full unmasked `isMember` data; they are rules, not learned models.
 
@@ -28,6 +28,32 @@ The rule rows use the full unmasked `isMember` data; they are rules, not learned
 | strict: tree_depth3 | 0.942 ± 0.008 | 0.797 ± 0.033 | 0.847 ± 0.110 | 0.792 ± 0.054 | 0.800 [0.670, 0.902] |
 | strict: tree_full | 0.943 ± 0.005 | 0.802 ± 0.032 | 0.844 ± 0.073 | 0.799 ± 0.036 | 0.806 [0.679, 0.905] |
 | strict: random_forest | 0.964 ± 0.005 | 0.898 ± 0.012 | 0.869 ± 0.015 | 0.872 ± 0.016 | 0.870 [0.753, 0.952] |
+
+## Atom census
+
+Share of the concepts (one per fold) that mention `cont_Europe`, that mention any organization (`isMember` or an `org_*` individual), and that use only numeric-bin classes (`...Q<n>`), `neighbor` and `hasAirport`; distinct atoms = distinct names excluding constructors.
+
+| config | concepts | mention cont_Europe | mention an organization | only numeric-bin, neighbor, hasAirport | mean distinct atoms |
+|---|---|---|---|---|---|
+| G1_celoe_strict_disc_hv1_n0 | 15 | 1.00 | 0.07 | 0.00 | 4.1 |
+| G2_celoe_strict_disc_hv1_n10 | 15 | 1.00 | 0.33 | 0.00 | 4.1 |
+| G3_celoe_strict_disc_hv0_n0 | 15 | 0.00 | 0.00 | 1.00 | 4.7 |
+| G4_celoe_strict_disc_hv0_n10 | 15 | 0.00 | 0.00 | 1.00 | 4.3 |
+| G5_ocel_strict_disc_hv1_n0 | 15 | 1.00 | 0.67 | 0.00 | 5.5 |
+| G6_ocel_strict_disc_hv1_n10 | 15 | 0.47 | 0.53 | 0.00 | 4.4 |
+| G7_ocel_strict_disc_hv0_n0 | 15 | 0.00 | 0.00 | 0.87 | 9.1 |
+| G8_ocel_strict_disc_hv0_n10 | 15 | 0.00 | 0.00 | 1.00 | 4.5 |
+
+## OCEL rule sensitivity
+
+Alternative rule: OCEL's first listed entry (fallback to the main concept in folds whose log has no list). Main numbers above are unchanged.
+
+| config | folds with a list / without | folds where the first entry differs from the main concept | pooled F1, main rule | pooled F1, first listed entry | pooled F1 CI, first listed entry |
+|---|---|---|---|---|---|
+| G5_ocel_strict_disc_hv1_n0 | 0 / 15 | 0 | 0.741 | 0.741 | [0.596, 0.859] |
+| G6_ocel_strict_disc_hv1_n10 | 15 / 0 | 15 | 0.699 | 0.578 | [0.418, 0.713] |
+| G7_ocel_strict_disc_hv0_n0 | 0 / 15 | 0 | 0.678 | 0.678 | [0.526, 0.804] |
+| G8_ocel_strict_disc_hv0_n10 | 15 / 0 | 15 | 0.678 | 0.597 | [0.440, 0.735] |
 
 ## Per-config details
 

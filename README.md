@@ -119,4 +119,17 @@ python -m src.run_grid
 python -m src.run_grid --report-only
 ```
 
+Phase 3C (ablations and comparisons):
+
+```powershell
+python -m src.run_grid --suite ablations
+python -m src.ocel_sensitivity
+python -m src.export_predictions
+python -m src.compare
+python -m src.run_grid --report-only
+python -m src.run_grid --suite ablations --report-only
+```
+
+`--suite ablations` runs A1 (extended KB), A2 (masked), A3 (none) and A4 (strict with datatype restrictions) with CELOE, hasValue on, noise 0, and writes `results/grid_ablations.md`. `src.ocel_sensitivity` rescored G5 to G8 with OCEL's first listed entry (`results/ocel_alt*.csv`). `src.export_predictions` writes `results/predictions.csv` (git-ignored; learned configs from the run CSVs, strict baselines refitted with the same seeds and checked against `results/baselines.csv`). `src.compare` writes `results/compare.md` (paired bootstrap).
+
 `src.run_grid` runs the eight configurations G1 to G8 in sequence (about 50 minutes with 3 workers), resumes finished folds, and writes `results/grid_main.md` from `results/runs/G*.csv` and `results/baselines.csv`. `baselines.run_baselines` now also covers the `strict` variant (`features_strict.csv`). DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.

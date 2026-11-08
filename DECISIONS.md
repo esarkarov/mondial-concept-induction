@@ -21,4 +21,5 @@
 - Harness: `src/run_experiment.py` (resumable, `--workers N`, 3 workers tested, same concepts as sequential) writes `results/runs/<config>.csv`; `src/aggregate.py` summarises.
 - Learned concept per fold: CELOE = first entry of its solution list; OCEL = highest training accuracy among everything it reports (printed list and improvements), ties to the shorter one; set before the main grid.
 - Main grid (fixed before running, results in `results/grid_main.md`): CELOE and OCEL x hasValue on/off x noise 0/10 on the strict discretised KB, 60 s, 3 workers, repeats 0 to 2 (`src/run_grid.py`).
+- Phase 3C (fixed before running): ablations A1 extended, A2 masked, A3 none, A4 strict + datatype restrictions (CELOE, hasValue on, noise 0, 60 s); OCEL sensitivity = first listed entry; paired bootstrap = 1000 resamples of the 194 countries, seed 42, shared indices, F1 averaged over repeats; pairs listed in `src/compare.py`.
 - KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.
