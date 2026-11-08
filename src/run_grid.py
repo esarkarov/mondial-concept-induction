@@ -13,36 +13,56 @@ from src.run_experiment import ROOT, RUNS_DIR
 TIME_LIMIT = 60
 WORKERS = 3
 OVERRUN_SECONDS = 5
-GRID = [
-    ("G1", "celoe", True, 0),
-    ("G2", "celoe", True, 10),
-    ("G3", "celoe", False, 0),
-    ("G4", "celoe", False, 10),
-    ("G5", "ocel", True, 0),
-    ("G6", "ocel", True, 10),
-    ("G7", "ocel", False, 0),
-    ("G8", "ocel", False, 10),
-]
-REPORT = RESULTS_DIR / "grid_main.md"
+NUMERIC_SHORT = {"discretised": "disc", "datatype": "dt"}
 
 
-def config_name(entry):
-    label, algorithm, has_value, noise = entry
-    return f"{label}_{algorithm}_strict_disc_hv{int(has_value)}_n{noise}"
+def config(label, algorithm, has_value, noise, membership="strict", numeric="discretised"):
+    return {"label": label, "algorithm": algorithm, "has_value": has_value, "noise": noise,
+            "membership": membership, "numeric": numeric}
 
 
-def run_config(entry):
-    label, algorithm, has_value, noise = entry
+SUITES = {
+    "main": {
+        "configs": [
+            config("G1", "celoe", True, 0), config("G2", "celoe", True, 10),
+            config("G3", "celoe", False, 0), config("G4", "celoe", False, 10),
+            config("G5", "ocel", True, 0), config("G6", "ocel", True, 10),
+            config("G7", "ocel", False, 0), config("G8", "ocel", False, 10),
+        ],
+        "report": RESULTS_DIR / "grid_main.md",
+        "title": "Main grid (strict KB, discretised, 60 s, 3 workers, repeats 0 to 2)",
+        "baseline_variants": ["strict", "reference"],
+    },
+    "ablations": {
+        "configs": [
+            config("A1", "celoe", True, 0, membership="extended"),
+            config("A2", "celoe", True, 0, membership="masked"),
+            config("A3", "celoe", True, 0, membership="none"),
+            config("A4", "celoe", True, 0, membership="strict", numeric="datatype"),
+        ],
+        "report": RESULTS_DIR / "grid_ablations.md",
+        "title": "Ablations (CELOE, hasValue on, noise 0, 60 s, 3 workers, repeats 0 to 2); G1 is the reference row",
+        "baseline_variants": ["masked", "extended", "none", "strict", "reference"],
+    },
+}
+
+
+def config_name(c):
+    return (f"{c['label']}_{c['algorithm']}_{c['membership']}_{NUMERIC_SHORT[c['numeric']]}"
+            f"_hv{int(c['has_value'])}_n{c['noise']}")
+
+
+def run_config(c):
     command = [
-        sys.executable, "-m", "src.run_experiment", "--name", config_name(entry), "--algorithm", algorithm,
-        "--membership", "strict", "--numeric", "discretised",
-        "--has-value" if has_value else "--no-has-value", "--noise", str(noise),
+        sys.executable, "-m", "src.run_experiment", "--name", config_name(c), "--algorithm", c["algorithm"],
+        "--membership", c["membership"], "--numeric", c["numeric"],
+        "--has-value" if c["has_value"] else "--no-has-value", "--noise", str(c["noise"]),
         "--time", str(TIME_LIMIT), "--workers", str(WORKERS),
     ]
     start = time.time()
-    print(f"[{time.strftime('%H:%M:%S')}] {config_name(entry)} ...", flush=True)
+    print(f"[{time.strftime('%H:%M:%S')}] {config_name(c)} ...", flush=True)
     subprocess.run(command, cwd=ROOT, check=False)
-    print(f"[{time.strftime('%H:%M:%S')}] {config_name(entry)} finished in {time.time() - start:.0f}s", flush=True)
+    print(f"[{time.strftime('%H:%M:%S')}] {config_name(c)} finished in {time.time() - start:.0f}s", flush=True)
 
 
 def fmt(mean_std):
@@ -65,9 +85,9 @@ def main_table(rows):
     return lines
 
 
-def baseline_table(baselines_path):
+def baseline_table(baselines_path, variants):
     baselines = pd.read_csv(baselines_path)
-    wanted = baselines[(baselines["variant"].isin(["strict", "reference"]))]
+    wanted = baselines[baselines["variant"].isin(variants)]
     lines = [
         "| model | accuracy | precision | recall | F1 | pooled F1 [95% CI] |",
         "|---|---|---|---|---|---|",
@@ -101,45 +121,60 @@ def details(name, runs, time_limit):
     return lines
 
 
-def write_report():
-    folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
+def load_rows(configs, folds):
     rows = []
-    for entry in GRID:
-        path = RUNS_DIR / f"{config_name(entry)}.csv"
+    for c in configs:
+        path = RUNS_DIR / f"{config_name(c)}.csv"
         if path.exists():
             runs = read_runs(path)
             if len(runs):
-                rows.append((config_name(entry), runs, statistics(runs, folds)))
+                rows.append((config_name(c), runs, statistics(runs, folds)))
+    return rows
+
+
+def write_report(suite_name):
+    from src.grid_extras import census_lines, ocel_sensitivity_lines
+    suite = SUITES[suite_name]
+    folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
+    rows = load_rows(suite["configs"], folds)
+    if suite_name == "ablations":
+        rows = load_rows(SUITES["main"]["configs"][:1], folds) + rows
     lines = [
-        "# Main grid (strict KB, discretised, 60 s, 3 workers, repeats 0 to 2)", "",
+        f"# {suite['title']}", "",
         "Per-fold columns: mean over the folds of a repeat, then mean ± std over repeats. "
         "Pooled F1: out-of-fold predictions of all folds of a repeat, mean over repeats; the interval is the 95% bootstrap "
         "(1000 resamples per repeat, bounds averaged over repeats). Concept length = number of names, constructors and numbers.", "",
         "## Learned concepts", "",
     ]
     lines += main_table(rows)
-    lines += ["", "## Baselines on the strict variant (same folds)", "",
+    lines += ["", "## Baselines (same folds)", "",
               "The rule rows use the full unmasked `isMember` data; they are rules, not learned models.", ""]
-    lines += baseline_table(RESULTS_DIR / "baselines.csv")
+    lines += baseline_table(RESULTS_DIR / "baselines.csv", suite["baseline_variants"])
+    lines += ["", "## Atom census", ""]
+    lines += census_lines(rows)
+    if suite_name == "main":
+        lines += ["", "## OCEL rule sensitivity", ""]
+        lines += ocel_sensitivity_lines()
     lines += ["", "## Per-config details", ""]
     for name, runs, _ in rows:
         lines += details(name, runs, TIME_LIMIT)
-    REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"wrote {REPORT}")
+    suite["report"].write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"wrote {suite['report']}")
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--suite", choices=list(SUITES), default="main")
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--only")
     args = parser.parse_args()
     if not args.report_only:
         start = time.time()
-        for entry in GRID:
-            if args.only is None or entry[0] in args.only.split(","):
-                run_config(entry)
+        for c in SUITES[args.suite]["configs"]:
+            if args.only is None or c["label"] in args.only.split(","):
+                run_config(c)
         print(f"grid finished in {(time.time() - start) / 60:.1f} min", flush=True)
-    write_report()
+    write_report(args.suite)
 
 
 if __name__ == "__main__":

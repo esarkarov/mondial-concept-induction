@@ -31,3 +31,8 @@ results/runs/*
 !results/runs/*.csv
 
 !results/grid_main.md
+
+!results/grid_ablations.md
+!results/compare.md
+!results/ocel_alt.csv
+!results/ocel_alt_summary.csv
