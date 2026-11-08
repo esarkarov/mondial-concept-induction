@@ -18,7 +18,9 @@ Deliverables: `.owl` knowledge base, code, DL-Learner `.conf` files, baselines, 
 |---|---|
 | `data/raw/` | Source files: `mondial-schema.psql`, `mondial-inputs.psql` (committed), `mondial.rdf`, `mondial-meta.rdf` |
 | `data/processed/` | Generated CSVs, P/N lists, fold splits |
-| `src/` | Python package: export, kb, splits, masking; `config.py` holds seed, paths, masked organizations |
+| `src/` | Python package: `export_csv`, `labels`, `folds`, `features`; `config.py` holds seed, paths, masking lists, label set |
+| `scripts/` | `run_dllearner.ps1` (DL-Learner wrapper), `check_phase1.py` (consistency checks) |
+| `tools/` | DL-Learner distribution, downloaded manually (git-ignored) |
 | `kb/` | Generated `.owl` files |
 | `conf/` | DL-Learner `.conf` files |
 | `baselines/` | Decision tree and random forest |
@@ -42,7 +44,7 @@ On Linux/macOS, activate with `source .venv/bin/activate`.
 
 ## Running DL-Learner
 
-- Release: DL-Learner 1.5.0, asset `dllearner-1.5.0.zip` from <https://github.com/SmartDataAnalytics/DL-Learner/releases>. Extract it into `tools/dl-learner/` so the launcher is `tools/dl-learner/dllearner-1.5.0/bin/cli.bat`. `tools/` is git-ignored.
+- Release: DL-Learner 1.5.0, asset `dllearner-1.5.0.zip` from <https://github.com/SmartDataAnalytics/DL-Learner/releases>. `tools/` is git-ignored and is not filled by cloning: download the zip manually into `tools/`, then run `Expand-Archive tools\dllearner-1.5.0.zip -DestinationPath tools\dl-learner` so the launcher is `tools/dl-learner/dllearner-1.5.0/bin/cli.bat`.
 - Java: 17 (Temurin 17.0.20.1 was used). Its `INSTALL` file says Java 7 is required, but the release fails at startup on Java 17 without the flags below. Java 25 was not tested.
 - Flags: `--add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED`, passed through `JAVA_OPTS`. Removing either one made `examples/father.conf` fail.
 - Script: `scripts/run_dllearner.ps1` sets `JAVA_HOME`, `PATH` and `JAVA_OPTS` for its own process only, then calls `cli.bat`.
@@ -55,12 +57,24 @@ Extra arguments after the conf path are passed to `cli.bat`. The default Java is
 
 ## How to run
 
-The pipeline order is below. The scripts are not written yet; each step will be added under `src/`, `baselines/` or `conf/`.
+Run everything from the project root with the virtual environment active. Phase 1 (data, labels, folds, features, baselines):
 
-1. Export tables from the SQL files to CSV (`data/processed/`)
-2. Build P/N lists and apply masking
-3. Build the OWL knowledge base (`kb/`)
-4. Make 5-fold splits (seed 42)
-5. Run DL-Learner with the `.conf` files in `conf/`
-6. Run baselines (`baselines/`)
-7. Evaluate and collect results (`results/`)
+```powershell
+python -m src.export_csv
+python -m src.labels
+python -m src.folds
+python -m src.features
+python -m baselines.run_baselines
+python scripts\check_phase1.py
+```
+
+| Step | Writes |
+|---|---|
+| `src.export_csv` | `data/processed/csv/<table>.csv` (47 tables) |
+| `src.labels` | `eu_positives.csv`, `eu_negatives.csv`, `eu_excluded_candidates.csv`, `ismember_masked.csv`, `ismember_masked_extended.csv` |
+| `src.folds` | `data/processed/folds.csv` (5 folds x 3 repeats, seeds 42 to 44) |
+| `src.features` | `data/processed/features_{masked,extended,none}.csv` |
+| `baselines.run_baselines` | `results/baselines.csv` |
+| `scripts\check_phase1.py` | prints `OK` or the first failed check |
+
+Not yet implemented: the OWL knowledge base (`kb/`), the DL-Learner `.conf` files (`conf/`) and the DL-Learner evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.

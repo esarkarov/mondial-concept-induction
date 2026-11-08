@@ -1,0 +1,18 @@
+# Decisions
+
+- Task: classify countries as EU members; positives are `isMember` rows of type `member` for `EU`.
+- Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; 7 candidates and 45 negatives with a non-null `Dependent` are excluded.
+- Label set `all` (212 negatives, dependents kept) remains available through `LABEL_SET`.
+- EU rows are always removed from the isMember output, so the label cannot leak.
+- Mask `masked`: EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE, OSCE (283 rows removed).
+- Mask `extended`: masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC.
+- Variant `none`: no organization membership at all (no `org_*` columns).
+- Folds: stratified 5-fold, 3 repeats, seeds 42, 43, 44; every test fold has at least 5 positives.
+- Metrics: per-fold (mean over folds, then mean and std over repeats) and pooled out-of-fold (194 predictions per repeat) with a 95% bootstrap interval for pooled F1.
+- Baselines: decision tree (depth 3 and unrestricted), random forest, median imputation fitted on the training fold; references are majority class, Europe, AG and NSG membership rules.
+- DL-Learner 1.5.0 runs on Java 17 with `--add-opens java.base/java.lang.invoke=ALL-UNNAMED` and `--add-opens java.base/java.lang=ALL-UNNAMED`.
+- Algorithms: CELOE and OCEL are present in the distribution; ParCEL is not (PCELOE is).
+- Reasoner: `closed world reasoner` (Pellet underneath), as in the shipped `father.conf`.
+- Proposed, not confirmed: airports are left out of the knowledge base.
+- Proposed, not confirmed: country-code IRIs (for example `mondial:GR`) for countries.
+- Proposed, not confirmed: organizations are modelled as individuals.
