@@ -18,3 +18,6 @@ tools/
 data/processed/csv/
 data/processed/features_*.csv
 data/processed/ismember_masked*.csv
+
+kb/*.owl
+!kb/mondial_extended_discretised.owl

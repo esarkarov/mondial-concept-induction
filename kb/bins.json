@@ -1,0 +1,283 @@
+{
+  "population": {
+    "n_values": 246,
+    "edges": [
+      50.0,
+      276393.75,
+      4467834.5,
+      17586504.75,
+      1411778724.0
+    ],
+    "bins": [
+      {
+        "class": "PopulationQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 276393.75,
+        "count": 62
+      },
+      {
+        "class": "PopulationQ2",
+        "lower_exclusive": 276393.75,
+        "upper_inclusive": 4467834.5,
+        "count": 61
+      },
+      {
+        "class": "PopulationQ3",
+        "lower_exclusive": 4467834.5,
+        "upper_inclusive": 17586504.75,
+        "count": 61
+      },
+      {
+        "class": "PopulationQ4",
+        "lower_exclusive": 17586504.75,
+        "upper_inclusive": null,
+        "count": 62
+      }
+    ]
+  },
+  "area": {
+    "n_values": 246,
+    "edges": [
+      0.44,
+      1101.0,
+      65405.0,
+      372603.75,
+      17075200.0
+    ],
+    "bins": [
+      {
+        "class": "AreaQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 1101.0,
+        "count": 62
+      },
+      {
+        "class": "AreaQ2",
+        "lower_exclusive": 1101.0,
+        "upper_inclusive": 65405.0,
+        "count": 61
+      },
+      {
+        "class": "AreaQ3",
+        "lower_exclusive": 65405.0,
+        "upper_inclusive": 372603.75,
+        "count": 61
+      },
+      {
+        "class": "AreaQ4",
+        "lower_exclusive": 372603.75,
+        "upper_inclusive": null,
+        "count": 62
+      }
+    ]
+  },
+  "gdp": {
+    "n_values": 234,
+    "edges": [
+      1.5,
+      3124.5,
+      16330.0,
+      137800.0,
+      16720000.0
+    ],
+    "bins": [
+      {
+        "class": "GdpQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 3124.5,
+        "count": 59
+      },
+      {
+        "class": "GdpQ2",
+        "lower_exclusive": 3124.5,
+        "upper_inclusive": 16330.0,
+        "count": 58
+      },
+      {
+        "class": "GdpQ3",
+        "lower_exclusive": 16330.0,
+        "upper_inclusive": 137800.0,
+        "count": 58
+      },
+      {
+        "class": "GdpQ4",
+        "lower_exclusive": 137800.0,
+        "upper_inclusive": null,
+        "count": 59
+      }
+    ]
+  },
+  "gdp_per_capita": {
+    "n_values": 234,
+    "edges": [
+      151.79828490976578,
+      2228.136342984535,
+      6613.978837036402,
+      20465.0548477869,
+      154068.83242200065
+    ],
+    "bins": [
+      {
+        "class": "GdpPerCapitaQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 2228.136342984535,
+        "count": 59
+      },
+      {
+        "class": "GdpPerCapitaQ2",
+        "lower_exclusive": 2228.136342984535,
+        "upper_inclusive": 6613.978837036402,
+        "count": 58
+      },
+      {
+        "class": "GdpPerCapitaQ3",
+        "lower_exclusive": 6613.978837036402,
+        "upper_inclusive": 20465.0548477869,
+        "count": 58
+      },
+      {
+        "class": "GdpPerCapitaQ4",
+        "lower_exclusive": 20465.0548477869,
+        "upper_inclusive": null,
+        "count": 59
+      }
+    ]
+  },
+  "inflation": {
+    "n_values": 226,
+    "edges": [
+      -3.6,
+      1.8,
+      3.05,
+      5.8,
+      59.1
+    ],
+    "bins": [
+      {
+        "class": "InflationQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 1.8,
+        "count": 60
+      },
+      {
+        "class": "InflationQ2",
+        "lower_exclusive": 1.8,
+        "upper_inclusive": 3.05,
+        "count": 53
+      },
+      {
+        "class": "InflationQ3",
+        "lower_exclusive": 3.05,
+        "upper_inclusive": 5.8,
+        "count": 57
+      },
+      {
+        "class": "InflationQ4",
+        "lower_exclusive": 5.8,
+        "upper_inclusive": null,
+        "count": 56
+      }
+    ]
+  },
+  "infant_mortality": {
+    "n_values": 228,
+    "edges": [
+      1.81,
+      6.27,
+      14.165,
+      38.655,
+      145.82
+    ],
+    "bins": [
+      {
+        "class": "InfantMortalityQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 6.27,
+        "count": 57
+      },
+      {
+        "class": "InfantMortalityQ2",
+        "lower_exclusive": 6.27,
+        "upper_inclusive": 14.165,
+        "count": 57
+      },
+      {
+        "class": "InfantMortalityQ3",
+        "lower_exclusive": 14.165,
+        "upper_inclusive": 38.655,
+        "count": 57
+      },
+      {
+        "class": "InfantMortalityQ4",
+        "lower_exclusive": 38.655,
+        "upper_inclusive": null,
+        "count": 57
+      }
+    ]
+  },
+  "population_growth": {
+    "n_values": 234,
+    "edges": [
+      -9.73,
+      0.3075,
+      1.08,
+      1.9275,
+      9.37
+    ],
+    "bins": [
+      {
+        "class": "PopulationGrowthQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 0.3075,
+        "count": 59
+      },
+      {
+        "class": "PopulationGrowthQ2",
+        "lower_exclusive": 0.3075,
+        "upper_inclusive": 1.08,
+        "count": 58
+      },
+      {
+        "class": "PopulationGrowthQ3",
+        "lower_exclusive": 1.08,
+        "upper_inclusive": 1.9275,
+        "count": 58
+      },
+      {
+        "class": "PopulationGrowthQ4",
+        "lower_exclusive": 1.9275,
+        "upper_inclusive": null,
+        "count": 59
+      }
+    ]
+  },
+  "n_airports": {
+    "n_values": 246,
+    "edges": [
+      0.0,
+      1.0,
+      4.0,
+      125.0
+    ],
+    "bins": [
+      {
+        "class": "NAirportsQ1",
+        "lower_exclusive": null,
+        "upper_inclusive": 1.0,
+        "count": 148
+      },
+      {
+        "class": "NAirportsQ2",
+        "lower_exclusive": 1.0,
+        "upper_inclusive": 4.0,
+        "count": 42
+      },
+      {
+        "class": "NAirportsQ3",
+        "lower_exclusive": 4.0,
+        "upper_inclusive": null,
+        "count": 56
+      }
+    ]
+  }
+}
