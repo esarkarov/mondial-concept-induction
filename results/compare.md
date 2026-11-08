@@ -23,3 +23,6 @@ Where one model has fewer repeats, both are compared on the repeats they share (
 | O2_celoe_strict_disc_hv1_n0_pellet_closure | O1_celoe_strict_disc_hv1_n0_pellet | 0 only | +0.044 | +0.044 | [+0.000, +0.102] | yes |
 | A4_celoe_strict_dt_hv1_n0 | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.040 | +0.039 | [+0.000, +0.080] | no |
 | A4_celoe_strict_dt_hv1_n0 | A3_celoe_none_disc_hv1_n0 | 0,1,2 | +0.025 | +0.024 | [-0.012, +0.062] | yes |
+| O3_celoe_strict_disc_hv1_n0_pellet_closure_disjoint | G1_celoe_strict_disc_hv1_n0 | 0 only | -0.485 | -0.486 | [-0.597, -0.381] | no |
+| O3_celoe_strict_disc_hv1_n0_pellet_closure_disjoint | O2_celoe_strict_disc_hv1_n0_pellet_closure | 0 only | -0.504 | -0.505 | [-0.605, -0.409] | no |
+| O3_celoe_strict_disc_hv1_n0_pellet_closure_disjoint | O1_celoe_strict_disc_hv1_n0_pellet | 0 only | -0.460 | -0.461 | [-0.571, -0.363] | no |
