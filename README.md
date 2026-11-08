@@ -1,6 +1,6 @@
 # Concept induction on Mondial with DL-Learner
 
-University project, Symbolic Learning course (M1 Data Science & AI).
+University project, Symbolic Learning course.
 
 ## Goal
 
@@ -25,7 +25,6 @@ Deliverables: `.owl` knowledge base, code, DL-Learner `.conf` files, baselines, 
 | `results/` | Experiment outputs and logs (git-ignored) |
 | `report/` | Report |
 | `slides/` | Slides |
-| `tests/` | pytest tests |
 
 `data/raw/mondial.rdf` (24 MB) is git-ignored: each member copies it locally.
 
@@ -37,7 +36,6 @@ Python 3.15.2 was used to create the pinned environment; other recent Python 3 v
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-pytest
 ```
 
 On Linux/macOS, activate with `source .venv/bin/activate`.
