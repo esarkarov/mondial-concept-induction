@@ -59,6 +59,7 @@ def check_features():
     for variant, org_columns in expected.items():
         features = pd.read_csv(PROCESSED_DIR / f"features_{variant}.csv")
         check(len(features) == 194, f"features_{variant} rows: {len(features)}")
+        check("n_airports" in features.columns and features["n_airports"].notna().all(), f"features_{variant} n_airports")
         organizations = [c for c in features.columns if c.startswith("org_")]
         check(f"org_{EU_ORGANIZATION}" not in organizations, f"features_{variant} has an {EU_ORGANIZATION} column")
         check(len(organizations) == org_columns, f"features_{variant} organization columns: {len(organizations)}")

@@ -84,6 +84,8 @@ def build_base(codes):
 
     frame["coastal"] = pd.Index(codes).isin(set(read("geo_sea")["Country"])).astype(float)
 
+    frame["n_airports"] = read("airport")["Country"].value_counts().reindex(codes).fillna(0).astype(float)
+
     encompasses = read("encompasses")
     for continent in sorted(encompasses["Continent"].unique()):
         members = set(encompasses.loc[encompasses["Continent"] == continent, "Country"])
