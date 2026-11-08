@@ -21,8 +21,8 @@ Deliverables: `.owl` knowledge base, code, DL-Learner `.conf` files, baselines, 
 | `src/` | Python package: `export_csv`, `labels`, `folds`, `features`; `config.py` holds seed, paths, masking lists, label set |
 | `scripts/` | `run_dllearner.ps1` (DL-Learner wrapper), `check_phase1.py` (consistency checks) |
 | `tools/` | DL-Learner distribution, downloaded manually (git-ignored) |
-| `kb/` | Generated `.owl` files |
-| `conf/` | DL-Learner `.conf` files |
+| `kb/` | Generated `.owl` files and `bins.json`; only the default variant is tracked |
+| `conf/` | DL-Learner `.conf` files (`smoke_load.conf` loads the KB without learning) |
 | `baselines/` | Decision tree and random forest |
 | `results/` | Experiment outputs and logs (git-ignored) |
 | `report/` | Report |
@@ -77,4 +77,15 @@ python scripts\check_phase1.py
 | `baselines.run_baselines` | `results/baselines.csv` |
 | `scripts\check_phase1.py` | prints `OK` or the first failed check |
 
-Not yet implemented: the OWL knowledge base (`kb/`), the DL-Learner `.conf` files (`conf/`) and the DL-Learner evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
+Phase 2A (OWL knowledge base), after `src.labels`:
+
+```powershell
+python -m src.kb --membership extended --numeric discretised
+python scripts\check_kb.py
+```
+
+`src.kb` options: `--membership {masked,extended,none}` (default `extended`), `--numeric {discretised,datatype}` (default `discretised`), `--closure` (not implemented yet, it exits with a message). It writes `kb/mondial_<membership>_<numeric>.owl` and `kb/bins.json` (quantile bin edges over all 246 countries). Only `kb/mondial_extended_discretised.owl` and `kb/bins.json` are tracked; the other variants are regenerated with the same command.
+
+`scripts\check_kb.py` prints the counts, asserts the leakage and consistency checks, runs HermiT (owlready2, Java 17 from `DLLEARNER_JAVA_HOME` or the default Temurin folder) and loads the KB in DL-Learner with `conf/smoke_load.conf`. Options: `--kb <file>`, `--skip-hermit`, `--skip-dllearner`.
+
+Not yet implemented: the learning `.conf` files and the DL-Learner evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.

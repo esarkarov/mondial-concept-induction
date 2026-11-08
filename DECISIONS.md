@@ -15,5 +15,7 @@
 - Reasoner: `closed world reasoner` (Pellet underneath), as in the shipped `father.conf`.
 - Confirmed by team: airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
 - Confirmed by team: flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
-- Proposed, not confirmed: country-code IRIs (for example `mondial:GR`) for countries.
-- Proposed, not confirmed: organizations are modelled as individuals.
+- Proposed, awaiting team confirmation: country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
+- Proposed, awaiting team confirmation: organizations are individuals with a direct `isMember` role; their IRIs are `m:org_<abbrev>` because AG, C and NAM collide with country codes.
+- Proposed, awaiting team confirmation: main KB = `--membership extended --numeric discretised`, closed world reasoner; discretised means quartile bin classes (for example `PopulationQ3`, subclasses of `Country`) from `kb/bins.json`.
+- KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.
