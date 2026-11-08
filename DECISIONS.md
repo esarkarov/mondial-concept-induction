@@ -1,18 +1,14 @@
 # Decisions
 
 - Task: classify countries as EU members; positives are `isMember` rows of type `member` for `EU`.
-- Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; 7 candidates and 45 negatives with a non-null `Dependent` are excluded.
-- Label set `all` (212 negatives, dependents kept) remains available through `LABEL_SET`.
+- Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; 7 candidates and 45 negatives with a non-null `Dependent` are excluded; `all` (212 negatives) stays available.
 - EU rows are always removed from the isMember output, so the label cannot leak.
-- Mask `masked`: EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE, OSCE (283 rows removed).
-- Mask `extended`: masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC.
-- Variant `none`: no organization membership at all (no `org_*` columns).
+- Membership variants: `masked` (EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE, OSCE; 283 rows removed), `extended` (masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC), `none` (no `org_*` columns).
 - Folds: stratified 5-fold, 3 repeats, seeds 42, 43, 44; every test fold has at least 5 positives.
 - Metrics: per-fold (mean over folds, then mean and std over repeats) and pooled out-of-fold (194 predictions per repeat) with a 95% bootstrap interval for pooled F1.
 - Baselines: decision tree (depth 3 and unrestricted), random forest, median imputation fitted on the training fold; references are majority class, Europe, AG and NSG membership rules.
 - DL-Learner 1.5.0 runs on Java 17 with `--add-opens java.base/java.lang.invoke=ALL-UNNAMED` and `--add-opens java.base/java.lang=ALL-UNNAMED`.
-- Algorithms: CELOE and OCEL are present in the distribution; ParCEL is not (PCELOE is).
-- Reasoner: `closed world reasoner` (Pellet underneath), as in the shipped `father.conf`.
+- CELOE and OCEL are present in the distribution, ParCEL is not (PCELOE is); reasoner: `closed world reasoner` (Pellet underneath).
 - Confirmed by team: airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
 - Confirmed by team: flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
 - Proposed, awaiting team confirmation: country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
@@ -23,4 +19,6 @@
 - Proposed, awaiting team confirmation: `--membership strict` = extended mask plus `STRICT_EXTRA` (the 18 organizations that contain all 27 positives); organizations with 25 or 26 positives stay in.
 - Length/depth: only CELOE has a limit, `maxDepth` (nesting depth, default 7, `--max-depth` in `make_conf`); OCEL and the `rho` operator have none.
 - Harness: `src/run_experiment.py` (resumable, `--workers N`, 3 workers tested, same concepts as sequential) writes `results/runs/<config>.csv`; `src/aggregate.py` summarises.
+- Learned concept per fold: CELOE = first entry of its solution list; OCEL = highest training accuracy among everything it reports (printed list and improvements), ties to the shorter one; set before the main grid.
+- Main grid (fixed before running, results in `results/grid_main.md`): CELOE and OCEL x hasValue on/off x noise 0/10 on the strict discretised KB, 60 s, 3 workers, repeats 0 to 2 (`src/run_grid.py`).
 - KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.

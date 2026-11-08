@@ -110,4 +110,13 @@ python scripts\score_concept.py --items items.csv --out scored.csv
 
 `src.run_experiment` options: `--algorithm {celoe,ocel}`, `--membership {masked,extended,strict,none}`, `--numeric {discretised,datatype}`, `--[no-]has-value`, `--noise`, `--time`, `--max-depth` (CELOE only), `--repeats`, `--folds` (comma lists), `--workers`. Learned concepts are cached in `results/runs/<name>/` and one scored row per fold is appended to `results/runs/<name>.csv`; rerunning skips finished folds. `score_concept.py --items` scores many `kb,repeat,fold,concept` rows in one JVM per KB (CSV or JSON input).
 
-Not yet implemented: the full grid of configurations. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
+Phase 3B (main grid):
+
+```powershell
+python -m src.features
+python -m baselines.run_baselines
+python -m src.run_grid
+python -m src.run_grid --report-only
+```
+
+`src.run_grid` runs the eight configurations G1 to G8 in sequence (about 50 minutes with 3 workers), resumes finished folds, and writes `results/grid_main.md` from `results/runs/G*.csv` and `results/baselines.csv`. `baselines.run_baselines` now also covers the `strict` variant (`features_strict.csv`). DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
