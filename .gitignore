@@ -29,3 +29,5 @@ results/smoke_logs/
 !results/runs/
 results/runs/*
 !results/runs/*.csv
+
+!results/grid_main.md

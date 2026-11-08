@@ -22,7 +22,8 @@ WRAPPER = ROOT / "scripts" / "run_dllearner.ps1"
 MIN_REFERENCE_POSITIVES = 25
 
 SOLUTION_RE = re.compile(r"^(\d+): (.*) \(pred\. acc\.: ([\d,.]+)%, F-measure: ([\d,.]+)%\)\s*$")
-TERMINATED_RE = re.compile(r"Algorithm terminated[^(]*\(time: (.*?), (\d+) descriptions tested")
+OCEL_SOLUTION_RE = re.compile(r"^(\d+): (.*) \(accuracy ([\d,.]+)%, length (\d+), depth \d+\)\s*$")
+TERMINATED_RE =re.compile(r"Algorithm terminated[^(]*\(time: (.*?), (\d+) descriptions tested")
 STOPPED_RE = re.compile(r"Algorithm stopped \((\d+) descriptions tested")
 IMPROVEMENT_RE = re.compile(r"^more accurate \(([\d,.]+)%\) class expression found(?: after [^:]*)?: (.*)$")
 PROGRESS_RE = re.compile(r"^\[[=. ]+\] *\d+%")
@@ -78,8 +79,14 @@ def parse_output(lines, time_limit):
     if solutions:
         top = [{"concept": s[1], "train_accuracy": decimal(s[2])} for s in solutions[:3]]
     else:
-        improvements = [m.groups() for m in map(IMPROVEMENT_RE.match, lines) if m]
-        top = [{"concept": improvements[-1][1], "train_accuracy": decimal(improvements[-1][0])}] if improvements else []
+        reported = [(m.group(2), decimal(m.group(3)), int(m.group(4))) for m in map(OCEL_SOLUTION_RE.match, lines) if m]
+        reported += [(m.group(2), decimal(m.group(1)), concept_length(m.group(2))) for m in map(IMPROVEMENT_RE.match, lines) if m]
+        ranked, seen = [], set()
+        for concept, accuracy, length in sorted(reported, key=lambda item: (-item[1], item[2])):
+            if concept not in seen:
+                seen.add(concept)
+                ranked.append({"concept": concept, "train_accuracy": accuracy})
+        top = ranked[:3]
     return top, algorithm_seconds, tested
 
 

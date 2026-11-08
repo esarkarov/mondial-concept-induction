@@ -1,5 +1,4 @@
 import argparse
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -26,28 +25,40 @@ def pooled_predictions(runs, folds):
     return results
 
 
-def summarize(name, runs, folds):
+def statistics(runs, folds):
     per_repeat = runs.groupby("repeat")[[f"test_{m}" for m in METRICS]].mean()
     pooled = pooled_predictions(runs, folds)
     pooled_scores = pd.DataFrame([score(y, p) for y, p in pooled.values()], index=list(pooled))
     intervals = np.array([bootstrap_interval(y, p, np.random.default_rng(SEED + repeat)) for repeat, (y, p) in pooled.items()])
+    return {
+        "per_fold": {m: (per_repeat[f"test_{m}"].mean(), per_repeat[f"test_{m}"].std(ddof=1)) for m in METRICS},
+        "pooled_by_repeat": pooled_scores,
+        "pooled": {m: (pooled_scores[m].mean(), pooled_scores[m].std(ddof=1)) for m in METRICS},
+        "ci": tuple(intervals.mean(axis=0)),
+    }
 
+
+def summarize(name, runs, folds):
+    stats = statistics(runs, folds)
     print(f"\n=== {name}: {len(runs)} folds over {runs['repeat'].nunique()} repeat(s)")
     print("per-fold metrics (mean over folds per repeat, then mean +/- std over repeats):")
-    for m in METRICS:
-        values = per_repeat[f"test_{m}"]
-        print(f"  {m:9s} {values.mean():.3f} +/- {values.std(ddof=1):.3f}")
+    for m, (mean, std) in stats["per_fold"].items():
+        print(f"  {m:9s} {mean:.3f} +/- {std:.3f}")
     print("pooled out-of-fold (per repeat; mean +/- std over repeats):")
-    for repeat, row in pooled_scores.iterrows():
+    for repeat, row in stats["pooled_by_repeat"].iterrows():
         print(f"  repeat {repeat}: P {row['precision']:.3f}  R {row['recall']:.3f}  F1 {row['f1']:.3f}  acc {row['accuracy']:.3f}")
     for m in ["precision", "recall", "f1"]:
-        values = pooled_scores[m]
-        print(f"  pooled {m:9s} {values.mean():.3f} +/- {values.std(ddof=1):.3f}")
-    low, high = intervals.mean(axis=0)
+        mean, std = stats["pooled"][m]
+        print(f"  pooled {m:9s} {mean:.3f} +/- {std:.3f}")
+    low, high = stats["ci"]
     print(f"  pooled F1 95% bootstrap CI (1000 resamples, bounds averaged over repeats): [{low:.3f}, {high:.3f}]")
     print(f"  mean concept length {runs['length'].mean():.1f}; mean train accuracy {runs['train_accuracy'].mean():.2f}; "
           f"mean wall {runs['wall_seconds'].mean():.1f}s")
     print("  nearest reference per fold: " + ", ".join(f"{r.nearest_reference} ({r.jaccard:.2f})" for r in runs.itertuples()))
+
+
+def read_runs(path):
+    return pd.read_csv(path, dtype={"false_positives": str, "false_negatives": str}, keep_default_na=False)
 
 
 def main():
@@ -57,7 +68,7 @@ def main():
     folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
     paths = [RUNS_DIR / f"{c}.csv" for c in args.configs] or sorted(RUNS_DIR.glob("*.csv"))
     for path in paths:
-        runs = pd.read_csv(path, dtype={"false_positives": str, "false_negatives": str}, keep_default_na=False)
+        runs = read_runs(path)
         if len(runs):
             summarize(path.stem, runs, folds)
 
