@@ -51,6 +51,8 @@ def render(args, kb_relative):
         f"alg.maxExecutionTimeInSeconds = {args.time}",
         f"alg.noisePercentage = {args.noise}",
     ]
+    if args.max_depth is not None:
+        lines.append(f"alg.maxDepth = {args.max_depth}")
     return "\n".join(lines) + "\n", len(positives), len(negatives)
 
 
@@ -58,6 +60,7 @@ def default_name(args, kb):
     return (
         f"r{args.repeat}_f{args.fold}_{args.algorithm}_{kb.stem.replace('mondial_', '')}"
         f"_t{args.time}_n{args.noise:g}_hv{int(args.use_has_value)}"
+        + ("" if args.max_depth is None else f"_d{args.max_depth:g}")
     )
 
 
@@ -73,6 +76,7 @@ def main():
     parser.add_argument("--use-all", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--use-cardinality", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--use-has-value", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--max-depth", type=float, default=None)
     parser.add_argument("--name")
     args = parser.parse_args()
 

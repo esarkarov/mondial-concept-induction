@@ -20,4 +20,7 @@
 - Proposed, awaiting team confirmation: main KB = `--membership extended --numeric discretised`, closed world reasoner; discretised means quartile bin classes (for example `PopulationQ3`, subclasses of `Country`) from `kb/bins.json`.
 - Learning confs: `src/make_conf.py` writes them from `folds.csv` (training = all folds except the test fold; test countries never appear); refinement flags (`useNegation`, `useAllConstructor`, `useCardinalityRestrictions`, `useHasValueConstructor`) are set on the `rho` operator.
 - Scoring held-out countries: `scripts/score_concept.py` evaluates the learned concept with DL-Learner's own closed world reasoner (Java `ScoreConcept` on the 1.5.0 jars, `lp.evaluate` on the test examples), so semantics match training; owlready2/HermiT (open world) is not used for scoring.
+- Proposed, awaiting team confirmation: `--membership strict` = extended mask plus `STRICT_EXTRA` (the 18 organizations that contain all 27 positives); organizations with 25 or 26 positives stay in.
+- Length/depth: only CELOE has a limit, `maxDepth` (nesting depth, default 7, `--max-depth` in `make_conf`); OCEL and the `rho` operator have none.
+- Harness: `src/run_experiment.py` (resumable, `--workers N`, 3 workers tested, same concepts as sequential) writes `results/runs/<config>.csv`; `src/aggregate.py` summarises.
 - KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.

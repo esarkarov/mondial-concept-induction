@@ -99,4 +99,15 @@ python scripts\run_smoke.py
 
 `src.make_conf` writes git-ignored confs to `conf/generated/` (training examples only; options on the `rho` operator: `--[no-]use-negation`, `--[no-]use-all`, `--[no-]use-cardinality`, `--[no-]use-has-value`). `scripts/score_concept.py` scores a concept on the test fold with DL-Learner's own closed world reasoner through `scripts/java/ScoreConcept.java` (compiled on first use into `tools/score_concept/`, JDK 17 needed). `scripts/run_smoke.py` reruns the four smoke configurations and rewrites `results/smoke_phase2b.md`.
 
-Not yet implemented: the full 15-fold evaluation. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
+Phase 3A (experiment harness):
+
+```powershell
+python -m src.kb --membership strict
+python -m src.run_experiment --name celoe_ext_disc_hv1_n0 --has-value --noise 0 --time 60 --repeats 0 --workers 3
+python -m src.aggregate celoe_ext_disc_hv1_n0
+python scripts\score_concept.py --items items.csv --out scored.csv
+```
+
+`src.run_experiment` options: `--algorithm {celoe,ocel}`, `--membership {masked,extended,strict,none}`, `--numeric {discretised,datatype}`, `--[no-]has-value`, `--noise`, `--time`, `--max-depth` (CELOE only), `--repeats`, `--folds` (comma lists), `--workers`. Learned concepts are cached in `results/runs/<name>/` and one scored row per fold is appended to `results/runs/<name>.csv`; rerunning skips finished folds. `score_concept.py --items` scores many `kb,repeat,fold,concept` rows in one JVM per KB (CSV or JSON input).
+
+Not yet implemented: the full grid of configurations. DL-Learner itself runs through `scripts\run_dllearner.ps1` (see "Running DL-Learner"); it needs Java 17 and the manually downloaded `tools/dl-learner/` folder.
