@@ -1,12 +1,13 @@
 import argparse
 import json
 import re
+from pathlib import Path
+from xml.sax.saxutils import escape, quoteattr
 
 import numpy as np
 import pandas as pd
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
 from rdflib.namespace import OWL, RDF, RDFS, XSD
-from rdflib.collection import Collection
 
 from src.config import KB_DIR, MASK_EXTENDED, MASKED_ORGANIZATIONS, PROCESSED_DIR
 
@@ -125,11 +126,13 @@ def add_tbox(g, numeric_mode, bins):
     g.add((ontology, RDF.type, OWL.Ontology))
     for name in CLASSES:
         g.add((M[name], RDF.type, OWL.Class))
-    disjoint = BNode()
+    disjoint = BNode("disjointClasses")
     g.add((disjoint, RDF.type, OWL.AllDisjointClasses))
-    members = BNode()
-    Collection(g, members, [M[name] for name in CLASSES])
-    g.add((disjoint, OWL.members, members))
+    cells = [BNode(f"disjointCell{i}") for i in range(len(CLASSES))]
+    for i, (cell, name) in enumerate(zip(cells, CLASSES)):
+        g.add((cell, RDF.first, M[name]))
+        g.add((cell, RDF.rest, cells[i + 1] if i + 1 < len(cells) else RDF.nil))
+    g.add((disjoint, OWL.members, cells[0]))
 
     for role, range_class in OBJECT_ROLES.items():
         g.add((M[role], RDF.type, OWL.ObjectProperty))
@@ -244,6 +247,50 @@ def build(membership, numeric, closure):
     return g, bins, sizes
 
 
+PREFIXES = {
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "m": BASE,
+}
+
+
+def qname(iri):
+    for prefix, namespace in PREFIXES.items():
+        if str(iri).startswith(namespace):
+            return f"{prefix}:{str(iri)[len(namespace):]}"
+    raise ValueError(f"no prefix for predicate {iri}")
+
+
+def write_rdfxml(g, path):
+    by_subject = {}
+    for s, p, o in g:
+        by_subject.setdefault(s, []).append((p, o))
+    lines = ['<?xml version="1.0" encoding="utf-8"?>', "<rdf:RDF"]
+    lines += [f"    xmlns:{prefix}={quoteattr(namespace)}" for prefix, namespace in PREFIXES.items()]
+    lines.append(">")
+    for s in sorted(by_subject, key=lambda term: term.n3()):
+        subject = f"rdf:nodeID={quoteattr(str(s))}" if isinstance(s, BNode) else f"rdf:about={quoteattr(str(s))}"
+        lines.append(f"  <rdf:Description {subject}>")
+        for p, o in sorted(by_subject[s], key=lambda po: (po[0].n3(), po[1].n3())):
+            tag = qname(p)
+            if isinstance(o, BNode):
+                lines.append(f"    <{tag} rdf:nodeID={quoteattr(str(o))}/>")
+            elif isinstance(o, URIRef):
+                lines.append(f"    <{tag} rdf:resource={quoteattr(str(o))}/>")
+            else:
+                attribute = ""
+                if o.datatype:
+                    attribute = f" rdf:datatype={quoteattr(str(o.datatype))}"
+                elif o.language:
+                    attribute = f" xml:lang={quoteattr(o.language)}"
+                lines.append(f"    <{tag}{attribute}>{escape(str(o))}</{tag}>")
+        lines.append("  </rdf:Description>")
+    lines.append("</rdf:RDF>")
+    Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--membership", choices=["masked", "extended", "none"], default="extended")
@@ -254,7 +301,7 @@ def main():
     g, bins, sizes = build(args.membership, args.numeric, args.closure)
     KB_DIR.mkdir(exist_ok=True)
     out = KB_DIR / f"mondial_{args.membership}_{args.numeric}.owl"
-    g.serialize(destination=out, format="xml")
+    write_rdfxml(g, out)
     with open(KB_DIR / "bins.json", "w", encoding="utf-8") as f:
         json.dump(bins, f, indent=2)
 
