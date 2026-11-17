@@ -33,7 +33,7 @@ data/processed/  CSVs, labels, folds, features (most generated and git-ignored; 
 src/             pipeline: export, labels, folds, features, KB builder, conf writer, harness, grid, comparison, analysis, extensions
 baselines/       decision tree / random forest baselines (run_baselines.py, run_tuned.py)
 scripts/         DL-Learner wrapper, scorer (Python + Java), consistency checks, smoke run
-kb/              generated .owl files (only mondial_extended_discretised.owl is tracked) and bins*.json
+kb/              generated .owl files (only mondial_strict_discretised.owl and mondial_extended_discretised.owl are tracked) and bins*.json
 conf/            smoke_load*.conf (tracked); conf/generated/ holds generated confs (git-ignored)
 results/         result tables (tracked .md/.csv; run caches and logs are git-ignored)
 results/extensions/  outputs of the extensions E1 to E4
