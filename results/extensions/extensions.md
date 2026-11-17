@@ -357,6 +357,107 @@ Pooled test F1 over the 5 folds of repeat 0: 60 s 0.548, 300 s 0.559; best conce
 - concept length min/median/max: 9/10/11; mean train accuracy 90.34; jaccard to nearest reference min/mean: 0.56/0.70
 
 
+## E5. Equal-information baselines (run after the freeze and after E1 to E4)
+
+### Feature audit (full table: `results/extensions/feature_audit.csv`)
+
+| group | features | source table | KB counterpart | form in the KB |
+|---|---|---|---|---|
+| base column | 9 | airport, borders, country.Area, country.Population, economy.GDP, economy.Inflation, geo_sea, population.Infant_Mortality, population.Population_Growth | yes | `borderedBySea` role to sea individuals (the feature collapses it to any/none); count of `neighbor` fillers (role between country individuals); numeric attribute `area` (quartile bin class AreaQ1..Q4, or datatype property); numeric attribute `gdp` (GdpQ1..Q4, or datatype property); numeric attribute `infantMortality` (InfantMortalityQ1..Q4, or datatype property); numeric attribute `inflation` (InflationQ1..Q4, or datatype property); numeric attribute `nAirports` (NAirportsQ bins) and the `hasAirport` role to airport individuals; numeric attribute `populationGrowth` (PopulationGrowthQ1..Q4, or datatype property); numeric attribute `population` (PopulationQ1..Q4, or datatype property) |
+| economy/politics column | 5 | economy.Agriculture, economy.Industry, economy.Service, economy.Unemployment, politics.Independence | no | not in the KB |
+| politics.Government one-hot | 7 | politics.Government | no | not in the KB |
+| continent indicator | 6 | encompasses | yes | `encompassed` role to a continent individual (percentage not kept) |
+| top language indicator | 3 | spoken | yes | `mainLanguage` role (sub-property of `speaks`), same top-by-percentage rule |
+| share column | 30 | ethnicgroup.Percentage, religion.Percentage | no | share value not in the KB; only presence through the `follows` role (used as an indicator in kb_raw and kb_binned); share value not in the KB; only presence through the `hasEthnicGroup` role (used as an indicator in kb_raw and kb_binned) |
+| organization indicator | 146 | ismember | yes | `isMember` role to an organization individual (membership Type not kept) |
+| KB attribute without a baseline column | 1 | economy.GDP / country.Population | KB only | numeric attribute `gdpPerCapita` (GdpPerCapitaQ1..Q4); used in kb_raw and kb_binned |
+
+Baseline features **without a KB counterpart** (42 of 206 extended-variant features): agriculture, service, industry, unemployment, gov_other, gov_republic, gov_parliamentary democracy, gov_constitutional monarchy, gov_federal republic, gov_parliamentary democracy and a commonwealth realm, gov_parliamentary republic, independence_year, religion_Bahai, religion_Buddhist, religion_Catholic, religion_Christian, religion_Christian Orthodox, religion_Hindu, religion_Indigenous Beliefs, religion_Jehovas Witnesses, religion_Jewish, religion_Mormon, religion_Muslim, religion_Protestant, ethnic_African, ethnic_Arab, ethnic_Chinese, ethnic_European, ethnic_French, ethnic_Fula, ethnic_German, ethnic_Hausa, ethnic_Indian, ethnic_Italian, ethnic_Mandinka, ethnic_Mestizo, ethnic_Mulatto, ethnic_Polish, ethnic_Roma, ethnic_Romanian, ethnic_Russian, ethnic_Ukrainian.
+
+KB information with no baseline column: (gdp_per_capita) (`gdpPerCapita`), the identities of neighbors, individual seas, all spoken languages (the baselines keep only the top language), and organizations with fewer than 3 labelled members are dropped from the baselines and from the kb-only sets alike.
+
+### KB-only feature sets
+
+`kb_raw`: raw values of the 8 KB numeric attributes (population, area, gdp, gdp per capita, inflation, infant mortality, population growth, airports; missing stays missing and is median-imputed on the training fold) + indicators for continent, the number of neighbors, seas, spoken languages, followed religions and ethnic groups (present in at least 10 labelled countries) + organization membership indicators (same organizations as the baselines of that variant). `kb_binned`: the same, with the numeric attributes replaced by one-hot quartile bin classes from `kb/bins.json` (a missing value gives all zeros, as in the KB). Role indicators are 0 where the KB has no assertion. The main-language, main-religion and main-ethnic-group roles are not used. Untuned tree depth 3, full tree and 500-tree random forest, 15 folds.
+
+### Pooled results on the 194 countries (untuned baselines of `results/baselines.csv` repeated for reference)
+
+| features | model | n features | accuracy | precision | recall | F1 | pooled F1 [95% CI] |
+|---|---|---|---|---|---|---|---|
+| baseline strict (reference) | tree_depth3 | 188 | 0.942 ± 0.008 | 0.797 ± 0.033 | 0.847 ± 0.110 | 0.792 ± 0.054 | 0.800 [0.670, 0.902] |
+| baseline strict (reference) | tree_full | 188 | 0.943 ± 0.005 | 0.802 ± 0.032 | 0.844 ± 0.073 | 0.799 ± 0.036 | 0.806 [0.679, 0.905] |
+| baseline strict (reference) | random_forest | 188 | 0.964 ± 0.005 | 0.898 ± 0.012 | 0.869 ± 0.015 | 0.872 ± 0.016 | 0.870 [0.753, 0.952] |
+| kb_raw strict | tree_depth3 | 189 | 0.930 ± 0.021 | 0.722 ± 0.066 | 0.864 ± 0.051 | 0.778 ± 0.062 | 0.774 [0.644, 0.878] |
+| kb_raw strict | tree_full | 189 | 0.935 ± 0.015 | 0.751 ± 0.044 | 0.844 ± 0.021 | 0.787 ± 0.038 | 0.782 [0.645, 0.887] |
+| kb_raw strict | random_forest | 189 | 0.962 ± 0.008 | 0.890 ± 0.007 | 0.864 ± 0.038 | 0.863 ± 0.027 | 0.864 [0.747, 0.948] |
+| kb_binned strict | tree_depth3 | 212 | 0.947 ± 0.011 | 0.774 ± 0.056 | 0.940 ± 0.023 | 0.839 ± 0.033 | 0.831 [0.714, 0.922] |
+| kb_binned strict | tree_full | 212 | 0.952 ± 0.006 | 0.810 ± 0.041 | 0.893 ± 0.007 | 0.842 ± 0.024 | 0.837 [0.719, 0.927] |
+| kb_binned strict | random_forest | 212 | 0.960 ± 0.008 | 0.884 ± 0.014 | 0.851 ± 0.034 | 0.852 ± 0.033 | 0.857 [0.737, 0.944] |
+| baseline extended (reference) | tree_depth3 | 206 | 0.959 ± 0.005 | 0.835 ± 0.029 | 0.884 ± 0.073 | 0.849 ± 0.037 | 0.856 [0.749, 0.941] |
+| baseline extended (reference) | tree_full | 206 | 0.954 ± 0.005 | 0.830 ± 0.034 | 0.862 ± 0.054 | 0.834 ± 0.027 | 0.838 [0.724, 0.928] |
+| baseline extended (reference) | random_forest | 206 | 0.976 ± 0.003 | 0.888 ± 0.004 | 0.976 ± 0.021 | 0.922 ± 0.013 | 0.919 [0.831, 0.982] |
+| kb_raw extended | tree_depth3 | 207 | 0.962 ± 0.011 | 0.855 ± 0.020 | 0.916 ± 0.076 | 0.871 ± 0.043 | 0.870 [0.760, 0.953] |
+| kb_raw extended | tree_full | 207 | 0.961 ± 0.015 | 0.859 ± 0.011 | 0.889 ± 0.097 | 0.861 ± 0.056 | 0.861 [0.747, 0.945] |
+| kb_raw extended | random_forest | 207 | 0.973 ± 0.006 | 0.888 ± 0.004 | 0.949 ± 0.044 | 0.906 ± 0.027 | 0.906 [0.811, 0.973] |
+| kb_binned extended | tree_depth3 | 230 | 0.979 ± 0.005 | 0.893 ± 0.014 | 0.987 ± 0.023 | 0.934 ± 0.016 | 0.930 [0.849, 0.988] |
+| kb_binned extended | tree_full | 230 | 0.976 ± 0.008 | 0.924 ± 0.009 | 0.911 ± 0.080 | 0.910 ± 0.039 | 0.913 [0.824, 0.979] |
+| kb_binned extended | random_forest | 230 | 0.969 ± 0.005 | 0.887 ± 0.006 | 0.927 ± 0.037 | 0.892 ± 0.022 | 0.893 [0.788, 0.963] |
+
+### Paired bootstrap (194 countries)
+
+1000 resamples (seed 42), same method as `results/compare.md`; difference first minus second. G1 and A1 are the stored CELOE results; the strict forest is the untuned baseline.
+
+| first | second | repeats | point difference | mean difference | 95% interval | contains 0 |
+|---|---|---|---|---|---|---|
+| kbonly_kb_raw_strict_random_forest | strict_random_forest | 0,1,2 | -0.006 | -0.005 | [-0.045, +0.027] | yes |
+| kbonly_kb_binned_strict_random_forest | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.046 | +0.048 | [-0.029, +0.136] | yes |
+| kbonly_kb_raw_strict_random_forest | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.053 | +0.054 | [-0.027, +0.145] | yes |
+| kbonly_kb_binned_strict_tree_full | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.027 | +0.027 | [-0.054, +0.106] | yes |
+| kbonly_kb_binned_strict_tree_depth3 | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.020 | +0.022 | [-0.040, +0.081] | yes |
+| kbonly_kb_raw_extended_random_forest | A1_celoe_extended_disc_hv1_n0 | 0,1,2 | -0.025 | -0.025 | [-0.062, +0.000] | yes |
+
+### Europe-only problem (E1: 41 countries, 14 European negatives), strict features
+
+Same subset and folds as E1; trained on the subset's training rows only. Specificity = share of the 14 European negatives classified correctly (pooled per repeat, mean over repeats).
+
+| features | model | n features | accuracy | precision | recall | F1 | pooled F1 [95% CI] | specificity |
+|---|---|---|---|---|---|---|---|---|
+| kb_raw_strict | tree_depth3 | 165 | 0.738 ± 0.060 | 0.776 ± 0.044 | 0.867 ± 0.018 | 0.812 ± 0.035 | 0.805 [0.686, 0.907] | 0.452 |
+| kb_raw_strict | tree_full | 165 | 0.754 ± 0.059 | 0.810 ± 0.061 | 0.842 ± 0.020 | 0.815 ± 0.029 | 0.811 [0.687, 0.912] | 0.548 |
+| kb_raw_strict | random_forest | 165 | 0.793 ± 0.021 | 0.822 ± 0.028 | 0.911 ± 0.021 | 0.848 ± 0.009 | 0.846 [0.732, 0.936] | 0.524 |
+| kb_binned_strict | tree_depth3 | 188 | 0.779 ± 0.095 | 0.818 ± 0.072 | 0.880 ± 0.041 | 0.840 ± 0.063 | 0.836 [0.727, 0.930] | 0.571 |
+| kb_binned_strict | tree_full | 188 | 0.803 ± 0.075 | 0.836 ± 0.056 | 0.891 ± 0.034 | 0.856 ± 0.049 | 0.853 [0.744, 0.941] | 0.619 |
+| kb_binned_strict | random_forest | 188 | 0.782 ± 0.026 | 0.810 ± 0.012 | 0.913 ± 0.018 | 0.846 ± 0.015 | 0.836 [0.724, 0.928] | 0.476 |
+| baseline strict (E1 reference) | random_forest | | | | | | 0.883 (pooled F1, point) | 0.548 |
+| baseline strict (E1 reference) | tree_full | | | | | | 0.773 (pooled F1, point) | 0.524 |
+| E1a CELOE (reference) | | | | | | | 0.760 (pooled F1, point) | 0.286 |
+
+### Paired bootstrap on the 41 countries (vs E1a)
+
+1000 resamples (seed 42), difference first minus second.
+
+| first | second | repeats | point difference | mean difference | 95% interval | contains 0 |
+|---|---|---|---|---|---|---|
+| kbonly_e1_kb_raw_strict_random_forest | E1a_celoe_strict_disc_hv1_n0_europe | 0,1,2 | +0.086 | +0.087 | [+0.032, +0.149] | no |
+| kbonly_e1_kb_raw_strict_tree_full | E1a_celoe_strict_disc_hv1_n0_europe | 0,1,2 | +0.051 | +0.052 | [-0.022, +0.126] | yes |
+| kbonly_e1_kb_binned_strict_random_forest | E1a_celoe_strict_disc_hv1_n0_europe | 0,1,2 | +0.076 | +0.077 | [+0.027, +0.129] | no |
+| kbonly_e1_kb_binned_strict_tree_full | E1a_celoe_strict_disc_hv1_n0_europe | 0,1,2 | +0.093 | +0.093 | [+0.029, +0.165] | no |
+
+### Top 10 random forest feature importances, kb_raw strict features, Europe-only problem (mean over the 15 fits)
+
+| rank | feature | importance |
+|---|---|---|
+| 1 | gdp_per_capita | 0.0508 |
+| 2 | population | 0.0507 |
+| 3 | gdp | 0.0474 |
+| 4 | inflation | 0.0449 |
+| 5 | n_airports | 0.0417 |
+| 6 | population_growth | 0.0346 |
+| 7 | area | 0.0315 |
+| 8 | org_BIS | 0.0298 |
+| 9 | infant_mortality | 0.0277 |
+| 10 | org_UNITAR | 0.0241 |
+
 ## Odd things
 
 - E1: `majority_class` and `predict_all_positive` give identical predictions in every fold because the positives are the majority of the 41 countries (27 of 41); the test folds hold about 8 countries, so per-fold precision and recall are coarse. The `nearest_reference` columns in the E1 run CSVs use references restricted to the 41 countries, where `Europe` covers all of them.
@@ -365,6 +466,8 @@ Pooled test F1 over the 5 folds of repeat 0: 60 s 0.548, 300 s 0.559; best conce
 - E3: the tuned strict random forest has a lower pooled F1 than the untuned strict forest (paired difference in the table above). Ties between hyperparameter settings are broken by `GridSearchCV` in grid order.
 - E4: the 'missing folds' lines in the per-config details of E4 list repeats 1 and 2 because only repeat 0 was run, as specified. All ten 300 s runs ended at exactly 300.0 algorithm seconds (wall 310 to 316 s).
 - E4: for the stored G1 repeat 0 fold 2 run the final best concept does not appear as an improvement line in its 60 s log ('not printed as an improvement'); the cause was not investigated.
+- E5: the kb-only sets have 165 to 230 features depending on the set, the baselines 188 (strict) and 206 (extended); `kb_raw` leaves missing numeric values missing and median-imputes them on the training fold, `kb_binned` gives a missing value all-zero bin columns. Choices fixed before running: neighbors as a count, role indicators kept for values present in at least 10 labelled countries (by analogy with the share-column threshold), main-language/religion/ethnic-group roles not used, organizations as in the baselines of the same variant.
+- E5: the E1 reference rows (baseline strict forest and tree, E1a) show only the pooled F1 point value and specificity; their full rows are in the E1 section above.
 - Part A ran sequentially, one DL-Learner configuration at a time with 3 workers; the light report generation for E1 overlapped with the first minutes of E2, and E3 ran alone after the DL-Learner runs.
 
 ## Not done
@@ -373,5 +476,6 @@ Pooled test F1 over the 5 folds of repeat 0: 60 s 0.548, 300 s 0.559; best conce
 - E1: only the three specified configurations (no OCEL, no noise, no other KB variants); baselines only with strict features.
 - E2: bins 3 and 5 only for the strict KB with CELOE and hasValue on; no per-attribute bin choice; G1 was not rerun.
 - E3: no paired bootstrap for the extended-feature tuned models and no other grids; tuned tree vs untuned tree was not compared.
+- E5: no tuned kb-only models, no CELOE or kb-only runs on the extended Europe-only problem, no feature-group ablation of the baselines, one run per model (forest seeds fixed).
 - E4: repeat 0 only (5 folds); no 300 s runs for other configurations; the log-time column is missing where a concept was not printed as an improvement.
 - Not investigated: the log mismatch in the stored G1 fold 2 run, and why `NAirportsQ2` is empty in the 5-bin KB beyond the edge arithmetic.

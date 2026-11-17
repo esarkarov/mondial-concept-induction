@@ -8,6 +8,7 @@ from sklearn.dummy import DummyClassifier
 
 from baselines.run_baselines import METRICS, models, score, summarize
 from src.aggregate import read_runs, statistics
+from baselines.run_kbonly import MIN_INDICATOR
 from src.compare import f1_resampled, matrices, mean_f1, stack
 from src.config import KB_DIR, N_FOLDS, PROCESSED_DIR, RESULTS_DIR, SEED
 from src.grid_extras import IMPROVEMENT_RE, seconds
@@ -22,6 +23,7 @@ TUNED_PREDICTIONS = EXTENSIONS_DIR / "predictions_tuned.csv"
 N_RESAMPLES = 1000
 G1 = "G1_celoe_strict_disc_hv1_n0"
 G3 = "G3_celoe_strict_disc_hv0_n0"
+A1 = "A1_celoe_extended_disc_hv1_n0"
 STRICT_FOREST = "strict_random_forest"
 BIN_RE = re.compile(r"[A-Za-z]+Q\d")
 ATTRIBUTE_PREFIX = {"Population": "population", "Area": "area", "Gdp": "gdp", "GdpPerCapita": "gdp_per_capita", "Inflation": "inflation",
@@ -36,6 +38,9 @@ ODD_THINGS = [
     "Ties between hyperparameter settings are broken by `GridSearchCV` in grid order.",
     "E4: the 'missing folds' lines in the per-config details of E4 list repeats 1 and 2 because only repeat 0 was run, as specified. All ten 300 s runs ended at exactly 300.0 algorithm seconds (wall 310 to 316 s).",
     "E4: for the stored G1 repeat 0 fold 2 run the final best concept does not appear as an improvement line in its 60 s log ('not printed as an improvement'); the cause was not investigated.",
+    "E5: the kb-only sets have 165 to 230 features depending on the set, the baselines 188 (strict) and 206 (extended); `kb_raw` leaves missing numeric values missing and median-imputes them on the training fold, `kb_binned` gives a missing value all-zero bin columns. "
+    "Choices fixed before running: neighbors as a count, role indicators kept for values present in at least 10 labelled countries (by analogy with the share-column threshold), main-language/religion/ethnic-group roles not used, organizations as in the baselines of the same variant.",
+    "E5: the E1 reference rows (baseline strict forest and tree, E1a) show only the pooled F1 point value and specificity; their full rows are in the E1 section above.",
     "Part A ran sequentially, one DL-Learner configuration at a time with 3 workers; the light report generation for E1 overlapped with the first minutes of E2, and E3 ran alone after the DL-Learner runs.",
 ]
 NOT_DONE = [
@@ -43,6 +48,7 @@ NOT_DONE = [
     "E1: only the three specified configurations (no OCEL, no noise, no other KB variants); baselines only with strict features.",
     "E2: bins 3 and 5 only for the strict KB with CELOE and hasValue on; no per-attribute bin choice; G1 was not rerun.",
     "E3: no paired bootstrap for the extended-feature tuned models and no other grids; tuned tree vs untuned tree was not compared.",
+    "E5: no tuned kb-only models, no CELOE or kb-only runs on the extended Europe-only problem, no feature-group ablation of the baselines, one run per model (forest seeds fixed).",
     "E4: repeat 0 only (5 folds); no 300 s runs for other configurations; the log-time column is missing where a concept was not printed as an improvement.",
     "Not investigated: the log mismatch in the stored G1 fold 2 run, and why `NAirportsQ2` is empty in the 5-bin KB beyond the edge arithmetic.",
 ]
@@ -370,6 +376,80 @@ def e1_importances(base_folds):
     return lines
 
 
+def e5_section():
+    path = EXTENSIONS_DIR / "kbonly.csv"
+    if not path.exists():
+        return None
+    audit = pd.read_csv(EXTENSIONS_DIR / "feature_audit.csv", keep_default_na=False)
+    kb = pd.read_csv(path)
+    lines = ["## E5. Equal-information baselines (run after the freeze and after E1 to E4)", "",
+             "### Feature audit (full table: `results/extensions/feature_audit.csv`)", "",
+             "| group | features | source table | KB counterpart | form in the KB |", "|---|---|---|---|---|"]
+    for (group, counterpart), part in audit.groupby(["group", "kb_counterpart"], sort=False):
+        forms = "; ".join(sorted(set(part["kb_form"])))
+        lines.append(f"| {group} | {len(part)} | {', '.join(sorted(set(part['source_table'])))} | {counterpart} | {forms} |")
+    without = audit[audit["kb_counterpart"] == "no"]
+    lines += ["", f"Baseline features **without a KB counterpart** ({len(without)} of {int((audit['in_extended']).sum())} extended-variant features): " +
+              ", ".join(without["feature"]) + ".", "",
+              f"KB information with no baseline column: {', '.join(audit.loc[audit['kb_counterpart'] == 'KB only', 'feature'])} (`gdpPerCapita`), "
+              "the identities of neighbors, individual seas, all spoken languages (the baselines keep only the top language), and organizations with fewer than 3 labelled members are dropped from the baselines and from the kb-only sets alike.", "",
+              "### KB-only feature sets", "",
+              "`kb_raw`: raw values of the 8 KB numeric attributes (population, area, gdp, gdp per capita, inflation, infant mortality, population growth, airports; missing stays missing and is median-imputed on the training fold) "
+              f"+ indicators for continent, the number of neighbors, seas, spoken languages, followed religions and ethnic groups (present in at least {MIN_INDICATOR} labelled countries) + organization membership indicators (same organizations as the baselines of that variant). "
+              "`kb_binned`: the same, with the numeric attributes replaced by one-hot quartile bin classes from `kb/bins.json` (a missing value gives all zeros, as in the KB). "
+              "Role indicators are 0 where the KB has no assertion. The main-language, main-religion and main-ethnic-group roles are not used. Untuned tree depth 3, full tree and 500-tree random forest, 15 folds.", "",
+              "### Pooled results on the 194 countries (untuned baselines of `results/baselines.csv` repeated for reference)", "",
+              "| features | model | n features | accuracy | precision | recall | F1 | pooled F1 [95% CI] |", "|---|---|---|---|---|---|---|---|"]
+    baselines = pd.read_csv(RESULTS_DIR / "baselines.csv")
+
+    def row(label, model, n, r):
+        cells = " | ".join(f"{r[f'{m}_mean']:.3f} ± {r[f'{m}_std']:.3f}" for m in METRICS)
+        return f"| {label} | {model} | {n} | {cells} | {r['f1_pooled_mean']:.3f} [{r['f1_pooled_ci_low']:.3f}, {r['f1_pooled_ci_high']:.3f}] |"
+
+    for variant in ("strict", "extended"):
+        for model in ("tree_depth3", "tree_full", "random_forest"):
+            r = baselines[(baselines["variant"] == variant) & (baselines["model"] == model)].iloc[0]
+            n = len(pd.read_csv(PROCESSED_DIR / f"features_{variant}.csv", nrows=0).columns) - 2
+            lines.append(row(f"baseline {variant} (reference)", model, n, r))
+        for kind in ("kb_raw", "kb_binned"):
+            for model in ("tree_depth3", "tree_full", "random_forest"):
+                r = kb[(kb["problem"] == "all") & (kb["variant"] == f"{kind}_{variant}") & (kb["model"] == model)].iloc[0]
+                lines.append(row(f"{kind} {variant}", model, int(r["n_features"]), r))
+    existing = pd.read_csv(RESULTS_DIR / "predictions.csv", dtype={"code": str})
+    kb_predictions = pd.read_csv(EXTENSIONS_DIR / "predictions_kbonly.csv", dtype={"code": str})
+    all_predictions = pd.concat([existing[existing["config"].isin([G1, A1, STRICT_FOREST])], kb_predictions])
+    pairs = [("kbonly_kb_raw_strict_random_forest", STRICT_FOREST), ("kbonly_kb_binned_strict_random_forest", G1),
+             ("kbonly_kb_raw_strict_random_forest", G1), ("kbonly_kb_binned_strict_tree_full", G1), ("kbonly_kb_binned_strict_tree_depth3", G1),
+             ("kbonly_kb_raw_extended_random_forest", A1)]
+    lines += [""] + paired_table(all_predictions, pairs, 194, f"### Paired bootstrap (194 countries)\n\n{N_RESAMPLES} resamples (seed {SEED}), same method as `results/compare.md`; difference first minus second. "
+                                  "G1 and A1 are the stored CELOE results; the strict forest is the untuned baseline.")
+    europe = kb[kb["problem"] == "europe"]
+    e1 = pd.read_csv(E1_PREDICTIONS, dtype={"code": str})
+    e1_all = pd.concat([e1, kb_predictions])
+    e1a = GROUPS["E1"][0]["name"]
+    lines += ["", "### Europe-only problem (E1: 41 countries, 14 European negatives), strict features", "",
+              "Same subset and folds as E1; trained on the subset's training rows only. Specificity = share of the 14 European negatives classified correctly (pooled per repeat, mean over repeats).", "",
+              "| features | model | n features | accuracy | precision | recall | F1 | pooled F1 [95% CI] | specificity |", "|---|---|---|---|---|---|---|---|---|"]
+    for r in europe.to_dict("records"):
+        config = f"kbonly_e1_{r['variant']}_{r['model']}"
+        cells = " | ".join(f"{r[f'{m}_mean']:.3f} ± {r[f'{m}_std']:.3f}" for m in METRICS)
+        lines.append(f"| {r['variant']} | {r['model']} | {int(r['n_features'])} | {cells} | {r['f1_pooled_mean']:.3f} [{r['f1_pooled_ci_low']:.3f}, {r['f1_pooled_ci_high']:.3f}] | {specificity(e1_all, config):.3f} |")
+    for reference in ("e1_random_forest", "e1_tree_full", e1a):
+        config = reference
+        r = e1_all[e1_all["config"] == config]
+        if config != e1a:
+            lines.append(f"| baseline strict (E1 reference) | {config.removeprefix('e1_')} | | | | | | {pooled_f1_mean(e1_all, config):.3f} (pooled F1, point) | {specificity(e1_all, config):.3f} |")
+        else:
+            lines.append(f"| E1a CELOE (reference) | | | | | | | {pooled_f1_mean(e1_all, config):.3f} (pooled F1, point) | {specificity(e1_all, config):.3f} |")
+    e1_pairs = [(f"kbonly_e1_{k}_strict_{m}", e1a) for k in ("kb_raw", "kb_binned") for m in ("random_forest", "tree_full")]
+    lines += [""] + paired_table(e1_all, e1_pairs, 41, f"### Paired bootstrap on the 41 countries (vs E1a)\n\n{N_RESAMPLES} resamples (seed {SEED}), difference first minus second.")
+    importances = pd.read_csv(EXTENSIONS_DIR / "e5_importances_e1_kb_raw_strict.csv").head(10)
+    importances.insert(0, "rank", range(1, 11))
+    importances["importance"] = importances["importance"].map(lambda v: f"{v:.4f}")
+    lines += ["", "### Top 10 random forest feature importances, kb_raw strict features, Europe-only problem (mean over the 15 fits)", ""] + md_table(importances)
+    return lines
+
+
 def timeline(log):
     result = []
     for line in log.read_text(encoding="utf-8").splitlines():
@@ -446,7 +526,7 @@ def main():
     for section in (e2_section(base_folds), ):
         if section:
             lines += section + [""]
-    for section in (e3_section(), e3_v2_section(base_folds), e4_section(base_folds)):
+    for section in (e3_section(), e3_v2_section(base_folds), e4_section(base_folds), e5_section()):
         if section:
             lines += section + [""]
     lines += ["## Odd things", ""] + [f"- {t}" for t in ODD_THINGS] + ["", "## Not done", ""] + [f"- {t}" for t in NOT_DONE]
