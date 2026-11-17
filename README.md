@@ -66,6 +66,7 @@ Run from the project root with the virtual environment active. `[ ]` = output fi
 9. Extensions, run after the freeze (tag `phase-3`):
    - `python -m src.run_extensions E1` (Europe-only problem), `E2` (3 and 5 bins), `E4` (300 s) [`results/extensions/runs/*.csv`]
    - `python -m baselines.run_tuned` [`results/extensions/tuned*.csv`, `predictions_tuned.csv`]
+   - `python -m baselines.run_kbonly` (KB-only baselines, feature audit) [`results/extensions/kbonly.csv`, `feature_audit.csv`, `predictions_kbonly.csv`]
    - `python -m src.extensions` [`results/extensions/extensions.md`]
 
 ## 5. Results
@@ -84,6 +85,7 @@ Result tables are in `results/`: `baselines.csv`, `grid_main.md`, `grid_ablation
 | E2a, E2b | G1 settings with 3 and 5 quantile bins |
 | E3 | tuned decision tree and random forest (inner 3-fold CV), strict and extended features |
 | E4a, E4b | G1 and G3 settings with a 300 s limit (repeat 0, folds 0 to 4) |
+| E5 | untuned tree/forest on KB-only features (raw or binned numerics, role indicators), 194 countries and the E1 subset |
 | F1, F2, F3 | concepts fitted on all 194 labelled countries (G1, A1, G3 settings), for presentation only |
 
 ## 6. Known limitations

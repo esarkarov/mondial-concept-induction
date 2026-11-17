@@ -29,6 +29,7 @@ Technical choices without a recorded team statement:
 - Main grid fixed before running: CELOE and OCEL x hasValue on/off x noise 0/10, strict discretised KB, 60 s, 3 workers, 3 repeats (G1 to G8). Ablations A1 to A4 and OWA runs O1 to O3 were fixed before running; O1 to O3 ran on repeat 0 only because Pellet tested under 1,000 descriptions in 60 s (rule fixed in advance).
 - KB scope: no label information is stored; 8 pairwise disjoint classes (Country, Organization, Continent, Language, Religion, EthnicGroup, Airport, Sea). `--closure` adds `only {fillers}` assertions for 7 country roles; `--disjoint-bins` makes the bins of one attribute pairwise disjoint.
 - Extensions E1 to E4 were run after the freeze (tag `phase-3`) with configurations fixed in advance; they are labelled as such in `results/extensions/extensions.md`. Option changes to older code keep the old defaults.
+- E5 (equal-information baselines, run after the freeze): with features restricted to what the KB contains, the untuned strict forest has pooled F1 0.864 [0.747, 0.948] (`kb_raw`) and 0.857 [0.737, 0.944] (`kb_binned`) against 0.870 for the full-feature forest; paired differences to G1 have intervals containing 0 on the 194 countries, and on the 41-country Europe-only problem the kb-only forests are above E1a with intervals excluding 0 (`results/extensions/extensions.md`).
 - Full-data concepts F1 to F3 (`results/analysis.md`) are for presentation only, not performance estimates.
 
 ## 3. Naming scheme
