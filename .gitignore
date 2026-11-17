@@ -38,3 +38,4 @@ results/runs/*
 !results/ocel_alt_summary.csv
 
 !results/grid_owa.md
+!results/analysis.md

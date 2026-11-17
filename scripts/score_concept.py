@@ -154,6 +154,24 @@ def batch_score(items):
     return results
 
 
+def covered_by(kb, concepts, codes, reasoner="cwr"):
+    codes = sorted(codes)
+    half = len(codes) // 2
+    kb = str(Path(kb).resolve())
+    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
+    key = hashlib.sha1((kb + reasoner + "|".join(codes) + "".join(concepts)).encode()).hexdigest()[:10]
+    batch_file = GENERATED_DIR / f"covered_{key}.tsv"
+    batch_file.write_text("".join(f"{i}\t{c}\n" for i, c in enumerate(concepts)), encoding="utf-8", newline="\n")
+    entries = run_java(write_conf(kb, codes[:half], codes[half:], reasoner), kb, ["--batch", str(batch_file)])
+    result = {}
+    for i, concept in enumerate(concepts):
+        entry = entries[str(i)]
+        if "SCORE_ERROR" in entry:
+            raise RuntimeError(entry["SCORE_ERROR"])
+        result[concept] = set(entry["SCORE_TP"].split()) | set(entry["SCORE_FP"].split())
+    return result
+
+
 def load_items(path):
     path = Path(path)
     frame = pd.read_json(path, dtype=False) if path.suffix == ".json" else pd.read_csv(path, dtype=str, keep_default_na=False)
