@@ -232,7 +232,7 @@ Smallest positive: Malta (519562). Labelled countries below the threshold: 27 (0
 
 ## 6. Runtime
 
-Wall seconds are per run as seen by the harness (JVM start included, 3 workers in parallel, so totals are compute minutes, not elapsed time); the O configs ran on repeat 0 only.
+Wall seconds are per run as seen by the harness (JVM start included, 3 workers in parallel, so totals are compute minutes, not elapsed time); the O configs ran on repeat 0 only; the D1 row is an extra single diagnostic run with a 600 s limit.
 
 | config | runs | mean wall s | mean tested | total wall minutes | total algorithm minutes |
 |---|---|---|---|---|---|
@@ -251,3 +251,4 @@ Wall seconds are per run as seen by the harness (JVM start included, 3 workers i
 | O1 | 5 | 75.9 | 1099 | 6.3 | 5.0 |
 | O2 | 5 | 74.5 | 1272 | 6.2 | 5.1 |
 | O3 | 5 | 83.9 | 80 | 7.0 | 6.2 |
+| D1 (extra: 600 s diagnostic, not a grid config) | 1 | 639.8 | 104 | 10.7 | 10.5 |

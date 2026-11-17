@@ -11,6 +11,7 @@ from src.config import KB_DIR, PROCESSED_DIR, RESULTS_DIR, ROOT
 from src.kb import numeric_table
 from src.make_conf import GENERATED_DIR, examples_block, flag, reasoner_lines
 from src.run_experiment import RUNS_DIR, WRAPPER, concept_length, parse_output
+from src.grid_extras import DIAGNOSTIC_NAME
 from src.run_grid import SUITES, config_name
 
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -319,6 +320,11 @@ def runtime():
         rows.append({"config": c["label"], "runs": len(runs), "mean wall s": round(runs["wall_seconds"].mean(), 1),
                      "mean tested": round(runs["tested"].mean()), "total wall minutes": round(runs["wall_seconds"].sum() / 60, 1),
                      "total algorithm minutes": round(runs["algorithm_seconds"].sum() / 60, 1)})
+    diagnostic = pd.read_csv(RUNS_DIR / f"{DIAGNOSTIC_NAME}.csv", keep_default_na=False)
+    rows.append({"config": "D1 (extra: 600 s diagnostic, not a grid config)", "runs": len(diagnostic),
+                 "mean wall s": round(diagnostic["wall_seconds"].mean(), 1), "mean tested": round(diagnostic["tested"].mean()),
+                 "total wall minutes": round(diagnostic["wall_seconds"].sum() / 60, 1),
+                 "total algorithm minutes": round(diagnostic["algorithm_seconds"].sum() / 60, 1)})
     table = pd.DataFrame(rows)
     table.to_csv(OUT_DIR / "runtime.csv", index=False)
     return table
@@ -358,7 +364,7 @@ def main():
               f"missing population: {int(frame['population'].isna().sum())}.", ""]
     lines += ["## 6. Runtime", "",
               "Wall seconds are per run as seen by the harness (JVM start included, 3 workers in parallel, so totals are compute minutes, not elapsed time); "
-              "the O configs ran on repeat 0 only.", ""]
+              "the O configs ran on repeat 0 only; the D1 row is an extra single diagnostic run with a 600 s limit.", ""]
     lines += md_table(runtime())
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {REPORT}")
