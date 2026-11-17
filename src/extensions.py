@@ -250,7 +250,7 @@ def e3_section():
     tuned = pd.read_csv(path)
     untuned = pd.read_csv(RESULTS_DIR / "baselines.csv")
     untuned = untuned[untuned["variant"].isin(["strict", "extended"]) & untuned["model"].isin(["tree_full", "random_forest"])]
-    lines = ["## E3. Tuned baselines (run after the freeze)", "",
+    lines = ["## E3 v1: grid did not contain the untuned default (run after the freeze)", "",
              "Same 15 folds. Inside each training fold, 3-fold stratified inner CV (seed 42) picks hyperparameters by F1: tree `max_depth` in {2,3,4,5,None} x `min_samples_leaf` in {1,2,5}; "
              "forest `n_estimators` in {100,300} x `max_depth` in {None,3,5} x `max_features` in {sqrt,0.3}. Median imputation fitted on the training fold. "
              "Untuned rows are from `results/baselines.csv` (unchanged).", "",
@@ -273,6 +273,100 @@ def e3_section():
     all_predictions = pd.concat([existing[existing["config"].isin([G1, STRICT_FOREST])], tuned_predictions])
     pairs = [("tuned_strict_random_forest", G1), ("tuned_strict_tree", G1), ("tuned_strict_random_forest", STRICT_FOREST)]
     lines += paired_table(all_predictions, pairs, 194, f"### Paired bootstrap\n\n{N_RESAMPLES} resamples of the 194 countries (seed {SEED}), same method as `results/compare.md`.")
+    return lines
+
+
+FOREST_DEFAULT = {"n_estimators": 500, "max_depth": None, "max_features": "sqrt"}
+TREE_DEFAULT = {"max_depth": None, "min_samples_leaf": 1}
+
+
+def untuned_predictions(variant, folds):
+    features = pd.read_csv(PROCESSED_DIR / f"features_{variant}.csv").set_index("code")
+    X = features.drop(columns="label")
+    rows = []
+    for model_name, make in models().items():
+        for (repeat, fold), test in folds.groupby(["repeat", "fold"]):
+            train = folds[(folds["repeat"] == repeat) & (folds["fold"] != fold)]
+            model = make()
+            model.fit(X.loc[train["code"]], features.loc[train["code"], "label"])
+            rows += [(f"{variant}_{model_name}", repeat, code, label, int(p))
+                     for code, label, p in zip(test["code"], test["label"], model.predict(X.loc[test["code"]]))]
+    frame = pd.DataFrame(rows, columns=["config", "repeat", "code", "label", "predicted"])
+    baselines = pd.read_csv(RESULTS_DIR / "baselines.csv")
+    for model_name in ("tree_full", "random_forest"):
+        expected = baselines[(baselines["variant"] == variant) & (baselines["model"] == model_name)]["f1_pooled_mean"].iloc[0]
+        assert abs(pooled_f1_mean(frame, f"{variant}_{model_name}") - expected) < 1e-9, (variant, model_name)
+    return frame
+
+
+def pooled_f1_mean(predictions, config):
+    return float(np.mean([score(g["label"].to_numpy(), g["predicted"].to_numpy())["f1"]
+                          for _, g in predictions[predictions["config"] == config].groupby("repeat")]))
+
+
+def e3_v2_section(base_folds):
+    path = EXTENSIONS_DIR / "tuned_v2.csv"
+    if not path.exists():
+        return None
+    tuned = pd.read_csv(path)
+    baselines = pd.read_csv(RESULTS_DIR / "baselines.csv")
+    untuned = baselines[baselines["variant"].isin(["strict", "extended"]) & baselines["model"].isin(["tree_full", "random_forest"])]
+    lines = ["## E3 v2: grid contains the untuned default (run after the freeze)", "",
+             "Same protocol as E3 v1 (15 folds, inner 3-fold stratified CV, seed 42, F1 selection, median imputation fitted on the training fold); the forest grid is now "
+             "`n_estimators` in {100,300,500} x `max_depth` in {None,3,5} x `max_features` in {sqrt,0.3}, so it contains the untuned default (500, None, sqrt); the tree grid is unchanged and already contains the default (None, leaf 1). "
+             "v1 results above are kept unchanged.", "",
+             "| model | accuracy | precision | recall | F1 | pooled accuracy | pooled precision | pooled recall | pooled F1 [95% CI] |", "|---|---|---|---|---|---|---|---|---|"]
+    for r in pd.concat([tuned, untuned]).itertuples():
+        cells = " | ".join(f"{getattr(r, m + '_mean'):.3f} ± {getattr(r, m + '_std'):.3f}" for m in METRICS)
+        pooled = " | ".join(f"{getattr(r, m + '_pooled_mean'):.3f}" for m in ("accuracy", "precision", "recall"))
+        lines.append(f"| {r.variant}: {r.model} | {cells} | {pooled} | {r.f1_pooled_mean:.3f} [{r.f1_pooled_ci_low:.3f}, {r.f1_pooled_ci_high:.3f}] |")
+    chosen = pd.read_csv(EXTENSIONS_DIR / "tuned_v2_hyperparameters.csv")
+    lines += ["", "### Chosen hyperparameters (15 outer folds per row; full table in `tuned_v2_hyperparameters.csv`)", ""]
+    for (variant, model), group in chosen.groupby(["variant", "model"], sort=False):
+        parsed = group["params"].map(json.loads)
+        default = FOREST_DEFAULT if model == "random_forest" else TREE_DEFAULT
+        n_default = int(sum(p == default for p in parsed))
+        lines.append(f"**{variant} {model}** (mean inner F1 {group['inner_f1'].mean():.3f}); untuned default `{json.dumps(default)}` chosen in {n_default} of {len(group)} folds: " +
+                     "; ".join(f"{n}x `{p}`" for p, n in Counter(group["params"]).most_common()))
+        for key in parsed.iloc[0]:
+            lines.append(f"  - {key}: " + ", ".join(f"{v} ({n})" for v, n in Counter(str(p[key]) for p in parsed).most_common()))
+        lines.append("")
+    existing = pd.read_csv(RESULTS_DIR / "predictions.csv", dtype={"code": str})
+    v2 = pd.read_csv(EXTENSIONS_DIR / "predictions_tuned_v2.csv", dtype={"code": str})
+    extended = untuned_predictions("extended", base_folds)
+    keep = ["G1_celoe_strict_disc_hv1_n0", "A1_celoe_extended_disc_hv1_n0", "strict_random_forest", "strict_tree_full"]
+    all_predictions = pd.concat([existing[existing["config"].isin(keep)], extended, v2])
+    pairs = [("tuned_v2_strict_random_forest", "strict_random_forest"), ("tuned_v2_strict_tree", "strict_tree_full"),
+             ("tuned_v2_strict_random_forest", "G1_celoe_strict_disc_hv1_n0"), ("tuned_v2_strict_tree", "G1_celoe_strict_disc_hv1_n0"),
+             ("tuned_v2_extended_random_forest", "extended_random_forest"), ("tuned_v2_extended_tree", "extended_tree_full"),
+             ("tuned_v2_extended_random_forest", "A1_celoe_extended_disc_hv1_n0"), ("tuned_v2_extended_tree", "A1_celoe_extended_disc_hv1_n0")]
+    lines += paired_table(all_predictions, pairs, 194, f"### Paired bootstrap (v2)\n\n{N_RESAMPLES} resamples of the 194 countries (seed {SEED}), same method as `results/compare.md`; "
+                          "untuned extended predictions were refitted with the same seeds and match `results/baselines.csv` pooled F1 exactly.")
+    return lines
+
+
+def e1_importances(base_folds):
+    folds = restrict(base_folds, "europe")
+    lines = ["## E1 random forest feature importances (run after the freeze)", "",
+             "Random forest of the Europe-only problem (500 trees, seed 42, median imputation), fitted on the training part of each of the 15 folds of the 41 countries; "
+             "importance = `feature_importances_`, mean over the 15 fits (std over the 15 fits in the last column). Top 15 of each feature set; full lists in `results/extensions/e1_importances_<variant>.csv`.", ""]
+    for variant in ("strict", "extended"):
+        features = pd.read_csv(PROCESSED_DIR / f"features_{variant}.csv").set_index("code")
+        X, y = features.drop(columns="label"), features["label"]
+        values = []
+        for (repeat, fold), _ in folds.groupby(["repeat", "fold"]):
+            train = folds[(folds["repeat"] == repeat) & (folds["fold"] != fold)]
+            model = models()["random_forest"]()
+            model.fit(X.loc[train["code"]], y.loc[train["code"]])
+            values.append(model[-1].feature_importances_)
+        table = pd.DataFrame({"feature": X.columns, "mean importance": np.mean(values, axis=0), "std": np.std(values, axis=0, ddof=1)})
+        table = table.sort_values("mean importance", ascending=False)
+        table.to_csv(EXTENSIONS_DIR / f"e1_importances_{variant}.csv", index=False)
+        top = table.head(15).copy()
+        top.insert(0, "rank", range(1, 16))
+        top["mean importance"] = top["mean importance"].map(lambda v: f"{v:.4f}")
+        top["std"] = top["std"].map(lambda v: f"{v:.4f}")
+        lines += [f"### {variant} features ({len(X.columns)} features)", ""] + md_table(top) + [""]
     return lines
 
 
@@ -346,10 +440,13 @@ def main():
     for section in (e1_section(base_folds),):
         if section:
             lines += section + [""]
+    for section in (e1_importances(base_folds) if runs_of(GROUPS["E1"][0]["name"]) is not None else None,):
+        if section:
+            lines += section + [""]
     for section in (e2_section(base_folds), ):
         if section:
             lines += section + [""]
-    for section in (e3_section(), e4_section(base_folds)):
+    for section in (e3_section(), e3_v2_section(base_folds), e4_section(base_folds)):
         if section:
             lines += section + [""]
     lines += ["## Odd things", ""] + [f"- {t}" for t in ODD_THINGS] + ["", "## Not done", ""] + [f"- {t}" for t in NOT_DONE]

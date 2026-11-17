@@ -86,6 +86,51 @@ Configurations were fixed before running and not changed after seeing results. S
 - concept length min/median/max: 3/7/7; mean train accuracy 93.34; jaccard to nearest reference min/mean: 0.84/0.95
 
 
+## E1 random forest feature importances (run after the freeze)
+
+Random forest of the Europe-only problem (500 trees, seed 42, median imputation), fitted on the training part of each of the 15 folds of the 41 countries; importance = `feature_importances_`, mean over the 15 fits (std over the 15 fits in the last column). Top 15 of each feature set; full lists in `results/extensions/e1_importances_<variant>.csv`.
+
+### strict features (188 features)
+
+| rank | feature | mean importance | std |
+|---|---|---|---|
+| 1 | unemployment | 0.0659 | 0.0151 |
+| 2 | agriculture | 0.0477 | 0.0090 |
+| 3 | service | 0.0419 | 0.0116 |
+| 4 | industry | 0.0419 | 0.0106 |
+| 5 | population | 0.0373 | 0.0064 |
+| 6 | gdp | 0.0369 | 0.0080 |
+| 7 | gov_other | 0.0297 | 0.0103 |
+| 8 | inflation | 0.0256 | 0.0057 |
+| 9 | n_airports | 0.0238 | 0.0051 |
+| 10 | independence_year | 0.0233 | 0.0116 |
+| 11 | religion_Protestant | 0.0228 | 0.0057 |
+| 12 | area | 0.0211 | 0.0052 |
+| 13 | org_BIS | 0.0189 | 0.0080 |
+| 14 | pop_growth | 0.0187 | 0.0065 |
+| 15 | religion_Christian Orthodox | 0.0182 | 0.0081 |
+
+### extended features (206 features)
+
+| rank | feature | mean importance | std |
+|---|---|---|---|
+| 1 | org_AG | 0.0666 | 0.0102 |
+| 2 | unemployment | 0.0594 | 0.0139 |
+| 3 | agriculture | 0.0372 | 0.0092 |
+| 4 | service | 0.0344 | 0.0110 |
+| 5 | industry | 0.0344 | 0.0123 |
+| 6 | gdp | 0.0295 | 0.0080 |
+| 7 | population | 0.0283 | 0.0056 |
+| 8 | org_PCA | 0.0264 | 0.0070 |
+| 9 | gov_other | 0.0260 | 0.0098 |
+| 10 | n_airports | 0.0237 | 0.0036 |
+| 11 | inflation | 0.0236 | 0.0057 |
+| 12 | org_NSG | 0.0215 | 0.0060 |
+| 13 | org_ICCt | 0.0199 | 0.0085 |
+| 14 | religion_Protestant | 0.0192 | 0.0050 |
+| 15 | independence_year | 0.0192 | 0.0095 |
+
+
 ## E2. Discretisation sensitivity (run after the freeze)
 
 CELOE, strict KB, hasValue on, noise 0, 60 s, 15 folds, 194 countries; G1 is the 4-bin reference (stored result, not rerun). Quantile bins as before; ties can give fewer bins.
@@ -157,7 +202,7 @@ CELOE, strict KB, hasValue on, noise 0, 60 s, 15 folds, 194 countries; G1 is the
 - concept length min/median/max: 7/9/9; mean train accuracy 96.60; jaccard to nearest reference min/mean: 0.91/0.92
 
 
-## E3. Tuned baselines (run after the freeze)
+## E3 v1: grid did not contain the untuned default (run after the freeze)
 
 Same 15 folds. Inside each training fold, 3-fold stratified inner CV (seed 42) picks hyperparameters by F1: tree `max_depth` in {2,3,4,5,None} x `min_samples_leaf` in {1,2,5}; forest `n_estimators` in {100,300} x `max_depth` in {None,3,5} x `max_features` in {sqrt,0.3}. Median imputation fitted on the training fold. Untuned rows are from `results/baselines.csv` (unchanged).
 
@@ -201,6 +246,56 @@ Same 15 folds. Inside each training fold, 3-fold stratified inner CV (seed 42) p
 | tuned_strict_random_forest | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.028 | +0.029 | [-0.043, +0.107] | yes |
 | tuned_strict_tree | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | -0.039 | -0.040 | [-0.114, +0.022] | yes |
 | tuned_strict_random_forest | strict_random_forest | 0,1,2 | -0.030 | -0.031 | [-0.064, -0.007] | no |
+
+## E3 v2: grid contains the untuned default (run after the freeze)
+
+Same protocol as E3 v1 (15 folds, inner 3-fold stratified CV, seed 42, F1 selection, median imputation fitted on the training fold); the forest grid is now `n_estimators` in {100,300,500} x `max_depth` in {None,3,5} x `max_features` in {sqrt,0.3}, so it contains the untuned default (500, None, sqrt); the tree grid is unchanged and already contains the default (None, leaf 1). v1 results above are kept unchanged.
+
+| model | accuracy | precision | recall | F1 | pooled accuracy | pooled precision | pooled recall | pooled F1 [95% CI] |
+|---|---|---|---|---|---|---|---|---|
+| strict: tuned_v2_tree | 0.931 ± 0.011 | 0.756 ± 0.021 | 0.838 ± 0.097 | 0.764 ± 0.054 | 0.931 | 0.718 | 0.840 | 0.772 [0.637, 0.882] |
+| strict: tuned_v2_random_forest | 0.961 ± 0.013 | 0.892 ± 0.022 | 0.856 ± 0.062 | 0.856 ± 0.049 | 0.960 | 0.863 | 0.852 | 0.857 [0.740, 0.943] |
+| extended: tuned_v2_tree | 0.957 ± 0.012 | 0.808 ± 0.037 | 0.933 ± 0.061 | 0.857 ± 0.033 | 0.957 | 0.796 | 0.938 | 0.859 [0.755, 0.941] |
+| extended: tuned_v2_random_forest | 0.974 ± 0.005 | 0.888 ± 0.004 | 0.964 ± 0.034 | 0.915 ± 0.019 | 0.974 | 0.867 | 0.963 | 0.912 [0.820, 0.976] |
+| extended: tree_full | 0.954 ± 0.005 | 0.830 ± 0.034 | 0.862 ± 0.054 | 0.834 ± 0.027 | 0.954 | 0.816 | 0.864 | 0.838 [0.724, 0.928] |
+| extended: random_forest | 0.976 ± 0.003 | 0.888 ± 0.004 | 0.976 ± 0.021 | 0.922 ± 0.013 | 0.976 | 0.868 | 0.975 | 0.919 [0.831, 0.982] |
+| strict: tree_full | 0.943 ± 0.005 | 0.802 ± 0.032 | 0.844 ± 0.073 | 0.799 ± 0.036 | 0.943 | 0.767 | 0.852 | 0.806 [0.679, 0.905] |
+| strict: random_forest | 0.964 ± 0.005 | 0.898 ± 0.012 | 0.869 ± 0.015 | 0.872 ± 0.016 | 0.964 | 0.875 | 0.864 | 0.870 [0.753, 0.952] |
+
+### Chosen hyperparameters (15 outer folds per row; full table in `tuned_v2_hyperparameters.csv`)
+
+**strict tree** (mean inner F1 0.764); untuned default `{"max_depth": null, "min_samples_leaf": 1}` chosen in 0 of 15 folds: 6x `{"max_depth": 2, "min_samples_leaf": 1}`; 5x `{"max_depth": 3, "min_samples_leaf": 1}`; 3x `{"max_depth": 2, "min_samples_leaf": 5}`; 1x `{"max_depth": 3, "min_samples_leaf": 5}`
+  - max_depth: 2 (9), 3 (6)
+  - min_samples_leaf: 1 (11), 5 (4)
+
+**strict random_forest** (mean inner F1 0.864); untuned default `{"n_estimators": 500, "max_depth": null, "max_features": "sqrt"}` chosen in 5 of 15 folds: 5x `{"max_depth": null, "max_features": "sqrt", "n_estimators": 500}`; 2x `{"max_depth": 5, "max_features": "sqrt", "n_estimators": 500}`; 2x `{"max_depth": null, "max_features": "sqrt", "n_estimators": 300}`; 1x `{"max_depth": 3, "max_features": 0.3, "n_estimators": 300}`; 1x `{"max_depth": 5, "max_features": "sqrt", "n_estimators": 100}`; 1x `{"max_depth": null, "max_features": 0.3, "n_estimators": 100}`; 1x `{"max_depth": null, "max_features": 0.3, "n_estimators": 300}`; 1x `{"max_depth": null, "max_features": "sqrt", "n_estimators": 100}`; 1x `{"max_depth": null, "max_features": 0.3, "n_estimators": 500}`
+  - max_depth: None (11), 5 (3), 3 (1)
+  - max_features: sqrt (11), 0.3 (4)
+  - n_estimators: 500 (8), 300 (4), 100 (3)
+
+**extended tree** (mean inner F1 0.815); untuned default `{"max_depth": null, "min_samples_leaf": 1}` chosen in 0 of 15 folds: 9x `{"max_depth": 2, "min_samples_leaf": 1}`; 5x `{"max_depth": 3, "min_samples_leaf": 1}`; 1x `{"max_depth": 4, "min_samples_leaf": 2}`
+  - max_depth: 2 (9), 3 (5), 4 (1)
+  - min_samples_leaf: 1 (14), 2 (1)
+
+**extended random_forest** (mean inner F1 0.929); untuned default `{"n_estimators": 500, "max_depth": null, "max_features": "sqrt"}` chosen in 0 of 15 folds: 5x `{"max_depth": null, "max_features": "sqrt", "n_estimators": 100}`; 3x `{"max_depth": null, "max_features": "sqrt", "n_estimators": 300}`; 2x `{"max_depth": null, "max_features": 0.3, "n_estimators": 100}`; 2x `{"max_depth": null, "max_features": 0.3, "n_estimators": 300}`; 1x `{"max_depth": 3, "max_features": 0.3, "n_estimators": 100}`; 1x `{"max_depth": null, "max_features": 0.3, "n_estimators": 500}`; 1x `{"max_depth": 5, "max_features": "sqrt", "n_estimators": 100}`
+  - max_depth: None (13), 3 (1), 5 (1)
+  - max_features: sqrt (9), 0.3 (6)
+  - n_estimators: 100 (9), 300 (5), 500 (1)
+
+### Paired bootstrap (v2)
+
+1000 resamples of the 194 countries (seed 42), same method as `results/compare.md`; untuned extended predictions were refitted with the same seeds and match `results/baselines.csv` pooled F1 exactly.
+
+| first | second | repeats | point difference | mean difference | 95% interval | contains 0 |
+|---|---|---|---|---|---|---|
+| tuned_v2_strict_random_forest | strict_random_forest | 0,1,2 | -0.013 | -0.013 | [-0.042, +0.012] | yes |
+| tuned_v2_strict_tree | strict_tree_full | 0,1,2 | -0.035 | -0.035 | [-0.077, +0.003] | yes |
+| tuned_v2_strict_random_forest | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | +0.046 | +0.047 | [-0.023, +0.133] | yes |
+| tuned_v2_strict_tree | G1_celoe_strict_disc_hv1_n0 | 0,1,2 | -0.039 | -0.040 | [-0.114, +0.022] | yes |
+| tuned_v2_extended_random_forest | extended_random_forest | 0,1,2 | -0.006 | -0.006 | [-0.022, +0.000] | yes |
+| tuned_v2_extended_tree | extended_tree_full | 0,1,2 | +0.021 | +0.021 | [-0.020, +0.063] | yes |
+| tuned_v2_extended_random_forest | A1_celoe_extended_disc_hv1_n0 | 0,1,2 | -0.019 | -0.019 | [-0.043, +0.000] | yes |
+| tuned_v2_extended_tree | A1_celoe_extended_disc_hv1_n0 | 0,1,2 | -0.072 | -0.072 | [-0.118, -0.035] | no |
 
 ## E4. Longer time limit (run after the freeze)
 
