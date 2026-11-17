@@ -1,28 +1,48 @@
 # Decisions
 
-- Task: classify countries as EU members; positives are `isMember` rows of type `member` for `EU`.
-- Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; 7 candidates and 45 negatives with a non-null `Dependent` are excluded; `all` (212 negatives) stays available.
-- EU rows are always removed from the isMember output, so the label cannot leak.
-- Membership variants: `masked` (EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE, OSCE; 283 rows removed), `extended` (masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC), `none` (no `org_*` columns).
-- Folds: stratified 5-fold, 3 repeats, seeds 42, 43, 44; every test fold has at least 5 positives.
-- Metrics: per-fold (mean over folds, then mean and std over repeats) and pooled out-of-fold (194 predictions per repeat) with a 95% bootstrap interval for pooled F1.
-- Baselines: decision tree (depth 3 and unrestricted), random forest, median imputation fitted on the training fold; references are majority class, Europe, AG and NSG membership rules.
-- DL-Learner 1.5.0 runs on Java 17 with `--add-opens java.base/java.lang.invoke=ALL-UNNAMED` and `--add-opens java.base/java.lang=ALL-UNNAMED`.
-- CELOE and OCEL are present in the distribution, ParCEL is not (PCELOE is); reasoner: `closed world reasoner` (Pellet underneath).
-- Confirmed by team: airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
-- Confirmed by team: flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
-- Proposed, awaiting team confirmation: country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
-- Proposed, awaiting team confirmation: organizations are individuals with a direct `isMember` role; their IRIs are `m:org_<abbrev>` because AG, C and NAM collide with country codes.
-- Proposed, awaiting team confirmation: main KB = `--membership extended --numeric discretised`, closed world reasoner; discretised means quartile bin classes (for example `PopulationQ3`, subclasses of `Country`) from `kb/bins.json`.
-- Learning confs: `src/make_conf.py` writes them from `folds.csv` (training = all folds except the test fold; test countries never appear); refinement flags (`useNegation`, `useAllConstructor`, `useCardinalityRestrictions`, `useHasValueConstructor`) are set on the `rho` operator.
-- Scoring held-out countries: `scripts/score_concept.py` evaluates the learned concept with DL-Learner's own closed world reasoner (Java `ScoreConcept` on the 1.5.0 jars, `lp.evaluate` on the test examples), so semantics match training; owlready2/HermiT (open world) is not used for scoring.
-- Proposed, awaiting team confirmation: `--membership strict` = extended mask plus `STRICT_EXTRA` (the 18 organizations that contain all 27 positives); organizations with 25 or 26 positives stay in.
-- Length/depth: only CELOE has a limit, `maxDepth` (nesting depth, default 7, `--max-depth` in `make_conf`); OCEL and the `rho` operator have none.
-- Harness: `src/run_experiment.py` (resumable, `--workers N`, 3 workers tested, same concepts as sequential) writes `results/runs/<config>.csv`; `src/aggregate.py` summarises.
-- Learned concept per fold: CELOE = first entry of its solution list; OCEL = highest training accuracy among everything it reports (printed list and improvements), ties to the shorter one; set before the main grid.
-- Main grid (fixed before running, results in `results/grid_main.md`): CELOE and OCEL x hasValue on/off x noise 0/10 on the strict discretised KB, 60 s, 3 workers, repeats 0 to 2 (`src/run_grid.py`).
-- Phase 3C (fixed before running): ablations A1 extended, A2 masked, A3 none, A4 strict + datatype restrictions (CELOE, hasValue on, noise 0, 60 s); OCEL sensitivity = first listed entry; paired bootstrap = 1000 resamples of the 194 countries, seed 42, shared indices, F1 averaged over repeats; pairs listed in `src/compare.py`.
-- Phase 3D: `--reasoner {cwr,pellet}` for training and scoring; `--closure` adds `only {fillers}` class assertions for 7 country roles; O1 (Pellet) and O2 (Pellet + closure) ran on repeat 0 only because Pellet tested under 1,000 descriptions in 60 s (rule fixed in advance).
-- Phase 3E: `--disjoint-bins` (bin classes of one attribute pairwise disjoint); O3 = Pellet + closure + disjoint bins, repeat 0 only; a 600 s diagnostic run is reported separately and is not part of the grid.
-- Note: in DL-Learner 1.5.0 the closed world reasoner treated `max n` as at most n+1 in probes against the CSVs (`min n` was exact); no learned concept in G1 to G8, A1 to A4 contains `max`.
-- KB scope: no label information is stored; 8 disjoint classes (the 7 listed plus `Sea` for `borderedBySea`); closure axioms are not implemented yet.
+Status wording: "Confirmed by team" is used only where the team confirmed the decision; everything else is what the experiments actually used.
+
+## 1. Confirmed by team
+
+- Airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
+- Flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
+- Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; the 7 EU candidates and the 45 negatives with a non-null `Dependent` are excluded; `all` (212 negatives) stays available.
+
+## 2. Adopted in the experiments, awaiting team confirmation
+
+Decisions the team was asked about:
+- Country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
+- Organizations are individuals with a direct `isMember` role; IRIs are `m:org_<abbrev>` because AG, C and NAM collide with country codes.
+- Headline configuration is the `strict` KB (G1); `extended` (A1) and `masked` (A2) and `none` (A3) are reported as ablations. `kb/mondial_extended_discretised.owl` is the tracked default KB. Discretised = quartile bin classes (for example `PopulationQ3`, subclasses of `Country`, edges in `kb/bins.json`).
+- Membership variants: `masked` (EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE, OSCE; 283 rows removed), `extended` (masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC), `strict` (extended plus the 18 organizations in `STRICT_EXTRA` that contain all 27 positives; organizations with 25 or 26 positives stay in), `none` (no `org_*` columns). The masking lists were chosen with knowledge of all labels.
+
+Technical choices without a recorded team statement:
+- EU `isMember` rows are always removed from the KB and from the feature tables, so the label cannot leak.
+- Folds: stratified 5-fold, 3 repeats, seeds 42, 43, 44 on the 194 labelled countries; every test fold has at least 5 positives. Folds are never regenerated.
+- Metrics: per-fold (mean over folds, then mean and std over repeats) and pooled out-of-fold with a 95% bootstrap interval (1000 resamples, seed 42 + repeat). Paired comparisons: 1000 resamples of the labelled countries, seed 42, shared indices, F1 averaged over repeats (`src/compare.py`).
+- Baselines: decision tree (depth 3 and unrestricted), random forest (500 trees), median imputation fitted on the training fold; references are majority class and the Europe, AG and NSG membership rules (rules use the unmasked data). Tuned baselines (E3): inner 3-fold CV on the training fold.
+- DL-Learner 1.5.0 on Java 17 with the two `--add-opens` flags; CELOE and OCEL (ParCEL is not in the distribution); closed world reasoner (Pellet underneath) is the default, `OWL API Reasoner` with Pellet for the open-world runs.
+- Learning confs are generated by `src/make_conf.py` from `folds.csv`: training examples only, test countries never appear; refinement flags (`useNegation`, `useAllConstructor`, `useCardinalityRestrictions`, `useHasValueConstructor`) are set on the `rho` operator; only CELOE has a depth limit (`maxDepth`, default 7).
+- Scoring: held-out countries are scored with DL-Learner's own reasoner (Java `ScoreConcept`), the same semantics as training; owlready2/HermiT is used only for consistency checks.
+- Learned concept per fold: CELOE = first entry of its solution list; OCEL = highest training accuracy among everything it reports, ties to the shorter concept (fixed before the main grid; one fold's test result had been seen before this rule was fixed).
+- Main grid fixed before running: CELOE and OCEL x hasValue on/off x noise 0/10, strict discretised KB, 60 s, 3 workers, 3 repeats (G1 to G8). Ablations A1 to A4 and OWA runs O1 to O3 were fixed before running; O1 to O3 ran on repeat 0 only because Pellet tested under 1,000 descriptions in 60 s (rule fixed in advance).
+- KB scope: no label information is stored; 8 pairwise disjoint classes (Country, Organization, Continent, Language, Religion, EthnicGroup, Airport, Sea). `--closure` adds `only {fillers}` assertions for 7 country roles; `--disjoint-bins` makes the bins of one attribute pairwise disjoint.
+- Extensions E1 to E4 were run after the freeze (tag `phase-3`) with configurations fixed in advance; they are labelled as such in `results/extensions/extensions.md`. Option changes to older code keep the old defaults.
+- Full-data concepts F1 to F3 (`results/analysis.md`) are for presentation only, not performance estimates.
+
+## 3. Naming scheme
+
+- Grid configs: `<label>_<algorithm>_<membership>_<disc|dt>_hv<0|1>_n<noise>` plus `_pellet`, `_closure`, `_disjoint` where used (for example `O3_celoe_strict_disc_hv1_n0_pellet_closure_disjoint`). Labels: G1 to G8 main grid, A1 to A4 ablations, O1 to O3 open world, D1 diagnostic.
+- Extensions: `E1a/b/c_..._europe` (Europe-only problem), `E2a/b_celoe_strict_b3|b5_hv1_n0` (bins), `E4a/b_..._t300` (300 s), `tuned_<variant>_<tree|random_forest>` (E3 predictions), F1 to F3 (full-data fits).
+- KB files: `kb/mondial_<membership>_<numeric>[_closure][_disjoint][_b3|_b5].owl`; bin edges in `kb/bins.json`, `bins_b3.json`, `bins_b5.json`.
+- Run outputs: `results/runs/<config>.csv` (one row per fold), caches `results/runs/<config>/r<repeat>_f<fold>.json` and logs (git-ignored); extensions in `results/extensions/runs/`.
+
+## 4. Limitations and open issues
+
+- DL-Learner 1.5.0's closed world reasoner treated `max n` as at most n+1 in probes against the CSVs (`min n` was exact); no learned best concept in G1 to G8 and A1 to A4 contains `max`. Not fixed.
+- Pellet on the closure plus disjoint-bins KB (O3) tested 80 descriptions per fold in 60 s and overran the time limit; cause not identified, no workaround applied.
+- O1 to O3 and E4 cover repeat 0 only.
+- Runs are time limited and depend on machine load; not bit-reproducible.
+- The strict KB drops organizations because they cover all positives; the label set and masking lists were chosen with knowledge of all labels.
+- 27 positives only: wide bootstrap intervals.
+- The report and slides are not written yet.
