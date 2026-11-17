@@ -88,11 +88,11 @@ def numeric_table(country):
     return frame
 
 
-def make_bins(frame):
+def make_bins(frame, n_bins=4):
     bins = {}
     for column, (class_prefix, _, _) in NUMERIC.items():
         values = frame[column].dropna()
-        edges = np.unique(np.quantile(values, QUANTILES))
+        edges = np.unique(np.quantile(values, QUANTILES if n_bins == 4 else np.linspace(0, 1, n_bins + 1)))
         inner = edges[1:-1]
         index = np.searchsorted(inner, values.to_numpy(), side="left")
         counts = np.bincount(index, minlength=len(inner) + 1)
@@ -194,7 +194,7 @@ def add_disjoint_bins(g, bins):
             g.add((cell, RDF.rest, cells[i + 1] if i + 1 < len(cells) else RDF.nil))
 
 
-def build(membership, numeric, closure, disjoint=False):
+def build(membership, numeric, closure, disjoint=False, n_bins=4):
     g = Graph()
     g.bind("m", M)
     names = Names()
@@ -202,7 +202,7 @@ def build(membership, numeric, closure, disjoint=False):
 
     country = read("country")
     frame = numeric_table(country)
-    bins = make_bins(frame)
+    bins = make_bins(frame, n_bins)
     add_tbox(g, numeric, bins)
     sizes["tbox"] = len(g)
 
@@ -336,15 +336,16 @@ def main():
     parser.add_argument("--numeric", choices=["discretised", "datatype"], default="discretised")
     parser.add_argument("--closure", action="store_true")
     parser.add_argument("--disjoint-bins", action="store_true")
+    parser.add_argument("--bins", type=int, choices=[3, 4, 5], default=4)
     args = parser.parse_args()
 
     if args.disjoint_bins and args.numeric != "discretised":
         raise SystemExit("--disjoint-bins needs --numeric discretised")
-    g, bins, sizes = build(args.membership, args.numeric, args.closure, args.disjoint_bins)
+    g, bins, sizes = build(args.membership, args.numeric, args.closure, args.disjoint_bins, args.bins)
     KB_DIR.mkdir(exist_ok=True)
-    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}{'_disjoint' if args.disjoint_bins else ''}.owl"
+    out = KB_DIR / f"mondial_{args.membership}_{args.numeric}{'_closure' if args.closure else ''}{'_disjoint' if args.disjoint_bins else ''}{'' if args.bins == 4 else f'_b{args.bins}'}.owl"
     write_rdfxml(g, out)
-    with open(KB_DIR / "bins.json", "w", encoding="utf-8") as f:
+    with open(KB_DIR / ("bins.json" if args.bins == 4 else f"bins_b{args.bins}.json"), "w", encoding="utf-8") as f:
         json.dump(bins, f, indent=2)
 
     print(f"wrote {out} ({out.stat().st_size / 1024:.0f} KB)")
