@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from score_concept import batch_score
 from src.config import FOLD_REPEATS, KB_DIR, KB_MEMBERSHIP_VARIANTS, N_FOLDS, PROCESSED_DIR
 from src.make_conf import GENERATED_DIR, REASONERS, render
+from src.problems import PROBLEMS, subset_codes
 
 RUNS_DIR = ROOT / "results" / "runs"
 WRAPPER = ROOT / "scripts" / "run_dllearner.ps1"
@@ -43,6 +44,7 @@ def read_csv(path):
 
 def kb_path(args):
     suffix = ("_closure" if args.closure else "") + ("_disjoint" if args.disjoint_bins else "")
+    suffix += "" if args.bins == 4 else f"_b{args.bins}"
     return KB_DIR / f"mondial_{args.membership}_{args.numeric}{suffix}.owl"
 
 
@@ -51,6 +53,7 @@ def ensure_kb(args):
     if not path.exists():
         command = [sys.executable, "-m", "src.kb", "--membership", args.membership, "--numeric", args.numeric]
         command += (["--closure"] if args.closure else []) + (["--disjoint-bins"] if args.disjoint_bins else [])
+        command += [] if args.bins == 4 else ["--bins", str(args.bins)]
         subprocess.run(command, check=True, cwd=ROOT, capture_output=True, text=True)
     return path
 
@@ -97,7 +100,7 @@ def learn(args, repeat, fold, run_dir):
     conf_args = SimpleNamespace(
         repeat=repeat, fold=fold, algorithm=args.algorithm, time=args.time, noise=args.noise,
         use_negation=True, use_all=True, use_cardinality=True, use_has_value=args.has_value, max_depth=args.max_depth,
-        reasoner=args.reasoner,
+        reasoner=args.reasoner, problem=args.problem,
     )
     text, _, _ = render(conf_args, Path("..", "..", "kb", kb_path(args).name).as_posix())
     GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -120,9 +123,11 @@ def learn(args, repeat, fold, run_dir):
     return state
 
 
-def reference_sets():
+def reference_sets(problem="all"):
     positives = set(read_csv(PROCESSED_DIR / "eu_positives.csv")["code"])
     labelled = positives | set(read_csv(PROCESSED_DIR / "eu_negatives.csv")["code"])
+    if subset_codes(problem) is not None:
+        labelled &= subset_codes(problem)
     encompasses = read_csv(PROCESSED_DIR / "csv" / "encompasses.csv")
     europe = set(encompasses.loc[encompasses["Continent"] == "Europe", "Country"]) & labelled
     sets = {"Europe": europe}
@@ -158,7 +163,7 @@ def append_rows(csv_path, rows):
 
 def score_finished(args, states, csv_path, references):
     items = [{"kb": str(kb_path(args)), "repeat": s["repeat"], "fold": s["fold"], "concept": s["top"][0]["concept"],
-              "reasoner": args.reasoner} for s in states]
+              "reasoner": args.reasoner, "problem": args.problem} for s in states]
     results = batch_score(items)
     rows = []
     for state, result in zip(states, results):
@@ -201,6 +206,9 @@ def main():
     parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
     parser.add_argument("--closure", action="store_true")
     parser.add_argument("--disjoint-bins", action="store_true")
+    parser.add_argument("--bins", type=int, choices=[3, 4, 5], default=4)
+    parser.add_argument("--problem", choices=PROBLEMS, default="all")
+    parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--repeats")
     parser.add_argument("--folds")
     parser.add_argument("--workers", type=int, default=1)
@@ -209,10 +217,11 @@ def main():
     ensure_kb(args)
     repeats = parse_list(args.repeats, list(range(FOLD_REPEATS)))
     folds = parse_list(args.folds, list(range(N_FOLDS)))
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    run_dir = RUNS_DIR / args.name
+    runs_dir = args.runs_dir
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = runs_dir / args.name
     run_dir.mkdir(exist_ok=True)
-    csv_path = RUNS_DIR / f"{args.name}.csv"
+    csv_path = runs_dir / f"{args.name}.csv"
 
     done = existing_rows(csv_path)
     finished = set(zip(done["repeat"], done["fold"]))
@@ -229,7 +238,7 @@ def main():
         if not s["top"]:
             print(f"  no concept for repeat {s['repeat']} fold {s['fold']} (exit {s['exit']}); see {run_dir / 'logs'}")
     print(f"learning finished in {time.time() - start:.1f}s", flush=True)
-    rows = score_finished(args, learned, csv_path, reference_sets())
+    rows = score_finished(args, learned, csv_path, reference_sets(args.problem))
     print(f"wrote {len(rows)} rows to {csv_path} (total time {time.time() - start:.1f}s)")
 
 

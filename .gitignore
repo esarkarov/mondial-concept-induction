@@ -39,3 +39,7 @@ results/runs/*
 
 !results/grid_owa.md
 !results/analysis.md
+
+!results/extensions/
+results/extensions/runs/*
+!results/extensions/runs/*.csv

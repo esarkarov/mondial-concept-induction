@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.config import PROCESSED_DIR
 from src.make_conf import REASONERS, reasoner_lines
+from src.problems import PROBLEMS, restrict
 
 DEFAULT_JAVA_HOME = r"C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot"
 DL_HOME = ROOT / "tools" / "dl-learner" / "dllearner-1.5.0"
@@ -109,28 +110,29 @@ def score(kb, concept, positives, negatives, reasoner="cwr"):
     }
 
 
-def labelled_examples():
+def labelled_examples(problem="all"):
     positives = sorted(pd.read_csv(PROCESSED_DIR / "eu_positives.csv", dtype=str, keep_default_na=False)["code"])
     negatives = sorted(pd.read_csv(PROCESSED_DIR / "eu_negatives.csv", dtype=str, keep_default_na=False)["code"])
-    return positives, negatives
+    keep = set(restrict(pd.DataFrame({"code": positives + negatives}), problem)["code"])
+    return [c for c in positives if c in keep], [c for c in negatives if c in keep]
 
 
-def test_examples(repeat, fold):
-    folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
+def test_examples(repeat, fold, problem="all"):
+    folds = restrict(pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str}), problem)
     test = folds[(folds["repeat"] == repeat) & (folds["fold"] == fold)]
     return sorted(test.loc[test["label"] == 1, "code"]), sorted(test.loc[test["label"] == 0, "code"])
 
 
 def batch_score(items):
-    positives, negatives = labelled_examples()
     results = [None] * len(items)
     groups = {}
     for index, item in enumerate(items):
-        key = (str(Path(item["kb"]).resolve()), item.get("reasoner") or "cwr")
+        key = (str(Path(item["kb"]).resolve()), item.get("reasoner") or "cwr", item.get("problem") or "all")
         groups.setdefault(key, []).append(index)
-    for (kb, reasoner), indices in groups.items():
+    for (kb, reasoner, problem), indices in groups.items():
+        positives, negatives = labelled_examples(problem)
         GENERATED_DIR.mkdir(parents=True, exist_ok=True)
-        key = hashlib.sha1((kb + reasoner + "".join(items[i]["concept"] for i in indices)).encode()).hexdigest()[:10]
+        key = hashlib.sha1((kb + reasoner + problem + "".join(items[i]["concept"] for i in indices)).encode()).hexdigest()[:10]
         batch_file = GENERATED_DIR / f"batch_{key}.tsv"
         batch_file.write_text(
             "".join(f"{i}\t{items[i]['concept']}\n" for i in indices), encoding="utf-8", newline="\n"
@@ -142,7 +144,7 @@ def batch_score(items):
                 results[i] = {"error": entry["SCORE_ERROR"]}
                 continue
             covered = set(entry["SCORE_TP"].split()) | set(entry["SCORE_FP"].split())
-            test_pos, test_neg = test_examples(int(items[i]["repeat"]), int(items[i]["fold"]))
+            test_pos, test_neg = test_examples(int(items[i]["repeat"]), int(items[i]["fold"]), problem)
             tp, fp = sorted(set(test_pos) & covered), sorted(set(test_neg) & covered)
             fn, tn = sorted(set(test_pos) - covered), sorted(set(test_neg) - covered)
             results[i] = {
@@ -187,6 +189,7 @@ def main():
     parser.add_argument("--items", type=Path)
     parser.add_argument("--out", type=Path)
     parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
+    parser.add_argument("--problem", choices=PROBLEMS, default="all")
     args = parser.parse_args()
 
     if args.items:
@@ -194,6 +197,7 @@ def main():
         for item in items:
             item.setdefault("kb", str(args.kb))
             item.setdefault("reasoner", args.reasoner)
+            item.setdefault("problem", args.problem)
         results = batch_score(items)
         rows = []
         for item, result in zip(items, results):
@@ -208,7 +212,7 @@ def main():
         print(table.to_string(index=False))
         return
 
-    positives, negatives = test_examples(args.repeat, args.fold)
+    positives, negatives = test_examples(args.repeat, args.fold, args.problem)
     print(json.dumps(score(args.kb, args.concept, positives, negatives, args.reasoner), indent=2))
 
 

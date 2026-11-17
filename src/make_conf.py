@@ -4,14 +4,15 @@ from pathlib import Path
 import pandas as pd
 
 from src.config import CONF_DIR, PROCESSED_DIR, ROOT
+from src.problems import PROBLEMS, restrict
 
 DEFAULT_KB = ROOT / "kb" / "mondial_extended_discretised.owl"
 GENERATED_DIR = CONF_DIR / "generated"
 BASE_IRI = "http://example.org/mondial#"
 
 
-def training_examples(repeat, fold):
-    folds = pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str})
+def training_examples(repeat, fold, problem="all"):
+    folds = restrict(pd.read_csv(PROCESSED_DIR / "folds.csv", dtype={"code": str}), problem)
     train = folds[(folds["repeat"] == repeat) & (folds["fold"] != fold)]
     positives = sorted(train.loc[train["label"] == 1, "code"])
     negatives = sorted(train.loc[train["label"] == 0, "code"])
@@ -39,7 +40,7 @@ def reasoner_lines(reasoner):
 
 
 def render(args, kb_relative):
-    positives, negatives = training_examples(args.repeat, args.fold)
+    positives, negatives = training_examples(args.repeat, args.fold, getattr(args, "problem", "all"))
     lines = [
         f'prefixes = [ ("m","{BASE_IRI}") ]',
         "",
@@ -90,6 +91,7 @@ def main():
     parser.add_argument("--use-has-value", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--max-depth", type=float, default=None)
     parser.add_argument("--reasoner", choices=REASONERS, default="cwr")
+    parser.add_argument("--problem", choices=PROBLEMS, default="all")
     parser.add_argument("--name")
     args = parser.parse_args()
 
