@@ -8,9 +8,10 @@ from types import SimpleNamespace
 import pandas as pd
 
 from src.config import KB_DIR, PROCESSED_DIR, RESULTS_DIR, ROOT
-from src.kb import numeric_table
+from src.kb import bin_of, numeric_table
 from src.make_conf import GENERATED_DIR, examples_block, flag, reasoner_lines
 from src.run_experiment import RUNS_DIR, WRAPPER, concept_length, parse_output
+from src.run_extensions import RUNS_DIR as EXTENSION_RUNS_DIR
 from src.grid_extras import DIAGNOSTIC_NAME
 from src.run_grid import SUITES, config_name
 
@@ -18,6 +19,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from score_concept import covered_by
 
 OUT_DIR = RESULTS_DIR / "analysis"
+G1_RUNS = RUNS_DIR / "G1_celoe_strict_disc_hv1_n0.csv"
+E2B_RUNS = EXTENSION_RUNS_DIR / "E2b_celoe_strict_b5_hv1_n0.csv"
 REPORT = RESULTS_DIR / "analysis.md"
 CSV_DIR = PROCESSED_DIR / "csv"
 ERROR_MODELS = ["G1_celoe_strict_disc_hv1_n0", "A1_celoe_extended_disc_hv1_n0", "strict_random_forest", "strict_tree_full", "rule_europe"]
@@ -313,6 +316,59 @@ def threshold(ctx):
     return result, frame, smallest_positive
 
 
+CARVINGS = [
+    ("G1 (strict KB, 4 bins)", "bins.json", "mondial_strict_discretised.owl", G1_RUNS, "carving_g1.csv", "InflationQ4", "PopulationQ1"),
+    ("E2b (strict KB, 5 bins)", "bins_b5.json", "mondial_strict_discretised_b5.owl", E2B_RUNS, "carving_e2b.csv", "InflationQ5", "PopulationQ1"),
+]
+
+
+def carving_section(ctx):
+    values = numeric_table(ctx.country)
+    groups = [("positive", sorted(ctx.positives)), ("European negative", sorted(ctx.negatives & ctx.europe)), ("candidate", sorted(ctx.candidates))]
+    lines = ["## 7. How the most frequent concepts carve the countries", "",
+             "For each country of the three groups, the atom(s) of the concept that exclude it, from the stored edges (`kb/bins.json`, `kb/bins_b5.json`; "
+             "bins are lower-exclusive, upper-inclusive). A bin atom excludes a country whose value lies in that bin; a country with no value is not in any bin and is not excluded by that atom; "
+             "`Europe` excludes a country with no `Europe` row in `encompasses`. Each table was checked against the closed world reasoner: the countries with no excluding atom are exactly the countries the concept covers.", ""]
+    for title, bins_file, kb_file, runs_file, csv_name, inflation_atom, population_atom in CARVINGS:
+        runs = pd.read_csv(runs_file, keep_default_na=False)
+        concept, count = Counter(runs["concept"]).most_common(1)[0]
+        expected = f"(not ({inflation_atom})) and (not ({population_atom})) and (encompassed some ({{cont_Europe}}))"
+        assert concept == expected, (title, concept)
+        bins = json.loads((KB_DIR / bins_file).read_text(encoding="utf-8"))
+        edges = {atom: next(b for b in bins[column]["bins"] if b["class"] == atom)
+                 for atom, column in ((inflation_atom, "inflation"), (population_atom, "population"))}
+        rows = []
+        for group, codes in groups:
+            for code in codes:
+                inflation, population = values.loc[code, "inflation"], values.loc[code, "population"]
+                excluded = []
+                if pd.notna(inflation) and bin_of(inflation, bins["inflation"]) == inflation_atom:
+                    excluded.append(inflation_atom)
+                if pd.notna(population) and bin_of(population, bins["population"]) == population_atom:
+                    excluded.append(population_atom)
+                if code not in ctx.europe:
+                    excluded.append("Europe")
+                rows.append({"group": group, "country": ctx.names[code], "code": code,
+                             "inflation": "no value" if pd.isna(inflation) else f"{inflation:g}",
+                             "population": f"{population:.0f}", "excluded by": ", ".join(excluded) or "none (covered)"})
+        table = pd.DataFrame(rows)
+        covered = covered_by(KB_DIR / kb_file, [concept], [r["code"] for r in rows])[concept]
+        assert covered == {r["code"] for r in rows if r["excluded by"] == "none (covered)"}, title
+        table.to_csv(OUT_DIR / csv_name, index=False)
+        lines += [f"### {title}: `{concept}` ({count} of {len(runs)} folds)", "",
+                  f"{inflation_atom}: lower_exclusive {edges[inflation_atom]['lower_exclusive']}, upper_inclusive {edges[inflation_atom]['upper_inclusive']}; "
+                  f"{population_atom}: lower_exclusive {edges[population_atom]['lower_exclusive']}, upper_inclusive {edges[population_atom]['upper_inclusive']}.", ""]
+        summary = []
+        for group, codes in groups:
+            part = table[table["group"] == group]
+            summary.append({"group": group, "countries": len(part), "covered": int((part["excluded by"] == "none (covered)").sum()),
+                            f"excluded by {inflation_atom}": int(part["excluded by"].str.contains(inflation_atom).sum()),
+                            f"excluded by {population_atom}": int(part["excluded by"].str.contains(population_atom).sum()),
+                            "excluded by Europe": int(part["excluded by"].str.contains("Europe").sum())})
+        lines += md_table(pd.DataFrame(summary)) + [""] + md_table(table[["group", "country", "inflation", "population", "excluded by"]]) + [""]
+    return lines
+
+
 def runtime():
     rows = []
     for c in ALL_CONFIGS:
@@ -366,6 +422,7 @@ def main():
               "Wall seconds are per run as seen by the harness (JVM start included, 3 workers in parallel, so totals are compute minutes, not elapsed time); "
               "the O configs ran on repeat 0 only; the D1 row is an extra single diagnostic run with a 600 s limit.", ""]
     lines += md_table(runtime())
+    lines += [""] + carving_section(ctx)
     REPORT.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"wrote {REPORT}")
 

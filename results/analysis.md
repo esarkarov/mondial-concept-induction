@@ -252,3 +252,130 @@ Wall seconds are per run as seen by the harness (JVM start included, 3 workers i
 | O2 | 5 | 74.5 | 1272 | 6.2 | 5.1 |
 | O3 | 5 | 83.9 | 80 | 7.0 | 6.2 |
 | D1 (extra: 600 s diagnostic, not a grid config) | 1 | 639.8 | 104 | 10.7 | 10.5 |
+
+## 7. How the most frequent concepts carve the countries
+
+For each country of the three groups, the atom(s) of the concept that exclude it, from the stored edges (`kb/bins.json`, `kb/bins_b5.json`; bins are lower-exclusive, upper-inclusive). A bin atom excludes a country whose value lies in that bin; a country with no value is not in any bin and is not excluded by that atom; `Europe` excludes a country with no `Europe` row in `encompasses`. Each table was checked against the closed world reasoner: the countries with no excluding atom are exactly the countries the concept covers.
+
+### G1 (strict KB, 4 bins): `(not (InflationQ4)) and (not (PopulationQ1)) and (encompassed some ({cont_Europe}))` (8 of 15 folds)
+
+InflationQ4: lower_exclusive 5.8, upper_inclusive None; PopulationQ1: lower_exclusive None, upper_inclusive 276393.75.
+
+| group | countries | covered | excluded by InflationQ4 | excluded by PopulationQ1 | excluded by Europe |
+|---|---|---|---|---|---|
+| positive | 27 | 27 | 0 | 0 | 0 |
+| European negative | 14 | 7 | 2 | 5 | 0 |
+| candidate | 7 | 6 | 1 | 0 | 0 |
+
+| group | country | inflation | population | excluded by |
+|---|---|---|---|---|
+| positive | Austria | 2.1 | 8401940 | none (covered) |
+| positive | Belgium | 1.3 | 11492641 | none (covered) |
+| positive | Bulgaria | 1.5 | 6520314 | none (covered) |
+| positive | Cyprus | 0.2 | 918100 | none (covered) |
+| positive | Czech Republic | 1.4 | 10524167 | none (covered) |
+| positive | Germany | 1.6 | 82521653 | none (covered) |
+| positive | Denmark | 0.8 | 5678348 | none (covered) |
+| positive | Spain | 1.8 | 47400798 | none (covered) |
+| positive | Estonia | 3.4 | 1331824 | none (covered) |
+| positive | France | 0.9 | 64300821 | none (covered) |
+| positive | Greece | -0.8 | 10432481 | none (covered) |
+| positive | Hungary | 1.9 | 9937628 | none (covered) |
+| positive | Croatia | 2.2 | 3871833 | none (covered) |
+| positive | Italy | 1.2 | 59433744 | none (covered) |
+| positive | Ireland | 0.6 | 5123536 | none (covered) |
+| positive | Luxembourg | 1.8 | 645397 | none (covered) |
+| positive | Lithuania | 1.2 | 2810761 | none (covered) |
+| positive | Latvia | 0.2 | 2201196 | none (covered) |
+| positive | Malta | 1 | 519562 | none (covered) |
+| positive | Netherlands | 2.5 | 17590672 | none (covered) |
+| positive | Portugal | 0.4 | 10343066 | none (covered) |
+| positive | Poland | 1 | 38036118 | none (covered) |
+| positive | Romania | 3.2 | 20121641 | none (covered) |
+| positive | Sweden | 0 | 9555893 | none (covered) |
+| positive | Finland | 2.2 | 5513130 | none (covered) |
+| positive | Slovakia | 1.7 | 5449270 | none (covered) |
+| positive | Slovenia | 1.8 | 2108977 | none (covered) |
+| European negative | Andorra | 1.1 | 79535 | PopulationQ1 |
+| European negative | Bosnia and Herzegovina | 0.2 | 3791622 | none (covered) |
+| European negative | Belarus | 19 | 9503807 | InflationQ4 |
+| European negative | Switzerland | -0.4 | 8670300 | none (covered) |
+| European negative | Liechtenstein | -0.7 | 39055 | PopulationQ1 |
+| European negative | United Kingdom | 2 | 66980000 | none (covered) |
+| European negative | Iceland | 3.9 | 364134 | none (covered) |
+| European negative | Kosovo | 1.8 | 1733872 | none (covered) |
+| European negative | Kazakhstan | 5.8 | 17165239 | none (covered) |
+| European negative | Monaco | 1.5 | 37308 | PopulationQ1 |
+| European negative | Norway | 1.9 | 5051275 | none (covered) |
+| European negative | Russia | 6.8 | 144699673 | InflationQ4 |
+| European negative | San Marino | 2.8 | 33627 | PopulationQ1 |
+| European negative | Vatican City | no value | 826 | PopulationQ1 |
+| candidate | Albania | 1.7 | 2821977 | none (covered) |
+| candidate | Moldova | 4.6 | 3473900 | none (covered) |
+| candidate | North Macedonia | 2.8 | 1836713 | none (covered) |
+| candidate | Montenegro | 4 | 619211 | none (covered) |
+| candidate | Serbia | 2.2 | 6690887 | none (covered) |
+| candidate | Turkey | 7.6 | 84680273 | InflationQ4 |
+| candidate | Ukraine | 0.7 | 43999924 | none (covered) |
+
+### E2b (strict KB, 5 bins): `(not (InflationQ5)) and (not (PopulationQ1)) and (encompassed some ({cont_Europe}))` (10 of 15 folds)
+
+InflationQ5: lower_exclusive 6.2, upper_inclusive None; PopulationQ1: lower_exclusive None, upper_inclusive 103328.0.
+
+| group | countries | covered | excluded by InflationQ5 | excluded by PopulationQ1 | excluded by Europe |
+|---|---|---|---|---|---|
+| positive | 27 | 27 | 0 | 0 | 0 |
+| European negative | 14 | 7 | 2 | 5 | 0 |
+| candidate | 7 | 6 | 1 | 0 | 0 |
+
+| group | country | inflation | population | excluded by |
+|---|---|---|---|---|
+| positive | Austria | 2.1 | 8401940 | none (covered) |
+| positive | Belgium | 1.3 | 11492641 | none (covered) |
+| positive | Bulgaria | 1.5 | 6520314 | none (covered) |
+| positive | Cyprus | 0.2 | 918100 | none (covered) |
+| positive | Czech Republic | 1.4 | 10524167 | none (covered) |
+| positive | Germany | 1.6 | 82521653 | none (covered) |
+| positive | Denmark | 0.8 | 5678348 | none (covered) |
+| positive | Spain | 1.8 | 47400798 | none (covered) |
+| positive | Estonia | 3.4 | 1331824 | none (covered) |
+| positive | France | 0.9 | 64300821 | none (covered) |
+| positive | Greece | -0.8 | 10432481 | none (covered) |
+| positive | Hungary | 1.9 | 9937628 | none (covered) |
+| positive | Croatia | 2.2 | 3871833 | none (covered) |
+| positive | Italy | 1.2 | 59433744 | none (covered) |
+| positive | Ireland | 0.6 | 5123536 | none (covered) |
+| positive | Luxembourg | 1.8 | 645397 | none (covered) |
+| positive | Lithuania | 1.2 | 2810761 | none (covered) |
+| positive | Latvia | 0.2 | 2201196 | none (covered) |
+| positive | Malta | 1 | 519562 | none (covered) |
+| positive | Netherlands | 2.5 | 17590672 | none (covered) |
+| positive | Portugal | 0.4 | 10343066 | none (covered) |
+| positive | Poland | 1 | 38036118 | none (covered) |
+| positive | Romania | 3.2 | 20121641 | none (covered) |
+| positive | Sweden | 0 | 9555893 | none (covered) |
+| positive | Finland | 2.2 | 5513130 | none (covered) |
+| positive | Slovakia | 1.7 | 5449270 | none (covered) |
+| positive | Slovenia | 1.8 | 2108977 | none (covered) |
+| European negative | Andorra | 1.1 | 79535 | PopulationQ1 |
+| European negative | Bosnia and Herzegovina | 0.2 | 3791622 | none (covered) |
+| European negative | Belarus | 19 | 9503807 | InflationQ5 |
+| European negative | Switzerland | -0.4 | 8670300 | none (covered) |
+| European negative | Liechtenstein | -0.7 | 39055 | PopulationQ1 |
+| European negative | United Kingdom | 2 | 66980000 | none (covered) |
+| European negative | Iceland | 3.9 | 364134 | none (covered) |
+| European negative | Kosovo | 1.8 | 1733872 | none (covered) |
+| European negative | Kazakhstan | 5.8 | 17165239 | none (covered) |
+| European negative | Monaco | 1.5 | 37308 | PopulationQ1 |
+| European negative | Norway | 1.9 | 5051275 | none (covered) |
+| European negative | Russia | 6.8 | 144699673 | InflationQ5 |
+| European negative | San Marino | 2.8 | 33627 | PopulationQ1 |
+| European negative | Vatican City | no value | 826 | PopulationQ1 |
+| candidate | Albania | 1.7 | 2821977 | none (covered) |
+| candidate | Moldova | 4.6 | 3473900 | none (covered) |
+| candidate | North Macedonia | 2.8 | 1836713 | none (covered) |
+| candidate | Montenegro | 4 | 619211 | none (covered) |
+| candidate | Serbia | 2.2 | 6690887 | none (covered) |
+| candidate | Turkey | 7.6 | 84680273 | InflationQ5 |
+| candidate | Ukraine | 0.7 | 43999924 | none (covered) |
+
