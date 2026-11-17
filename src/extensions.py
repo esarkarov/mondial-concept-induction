@@ -26,8 +26,26 @@ STRICT_FOREST = "strict_random_forest"
 BIN_RE = re.compile(r"[A-Za-z]+Q\d")
 ATTRIBUTE_PREFIX = {"Population": "population", "Area": "area", "Gdp": "gdp", "GdpPerCapita": "gdp_per_capita", "Inflation": "inflation",
                     "InfantMortality": "infant_mortality", "PopulationGrowth": "population_growth", "NAirports": "n_airports"}
-ODD_THINGS = []
-NOT_DONE = []
+ODD_THINGS = [
+    "E1: `majority_class` and `predict_all_positive` give identical predictions in every fold because the positives are the majority of the 41 countries (27 of 41); "
+    "the test folds hold about 8 countries, so per-fold precision and recall are coarse. The `nearest_reference` columns in the E1 run CSVs use references restricted to the 41 countries, where `Europe` covers all of them.",
+    "E1: specificity is the share of the 14 European negatives classified correctly, pooled per repeat and averaged over repeats; it is 0.000 for the two constant baselines by construction.",
+    "E2: with 3 and 5 bins `n_airports` has fewer distinct bins than requested (3 classes for 3 bins and for the 4-bin reference, 4 classes for 5 bins); in the 5-bin KB `NAirportsQ2` has 0 countries because its interval (1, x] contains no integer. "
+    "Atom names such as `InflationQ3` or `PopulationQ1` denote different intervals in each KB, so atoms are only comparable through the edges listed.",
+    "E3: the tuned strict random forest has a lower pooled F1 than the untuned strict forest (paired difference in the table above). "
+    "Ties between hyperparameter settings are broken by `GridSearchCV` in grid order.",
+    "E4: the 'missing folds' lines in the per-config details of E4 list repeats 1 and 2 because only repeat 0 was run, as specified. All ten 300 s runs ended at exactly 300.0 algorithm seconds (wall 310 to 316 s).",
+    "E4: for the stored G1 repeat 0 fold 2 run the final best concept does not appear as an improvement line in its 60 s log ('not printed as an improvement'); the cause was not investigated.",
+    "Part A ran sequentially, one DL-Learner configuration at a time with 3 workers; the light report generation for E1 overlapped with the first minutes of E2, and E3 ran alone after the DL-Learner runs.",
+]
+NOT_DONE = [
+    "E1, E2 and E4: one run per configuration; no repeated runs to measure run-to-run variation (runs are time limited and not bit-reproducible).",
+    "E1: only the three specified configurations (no OCEL, no noise, no other KB variants); baselines only with strict features.",
+    "E2: bins 3 and 5 only for the strict KB with CELOE and hasValue on; no per-attribute bin choice; G1 was not rerun.",
+    "E3: no paired bootstrap for the extended-feature tuned models and no other grids; tuned tree vs untuned tree was not compared.",
+    "E4: repeat 0 only (5 folds); no 300 s runs for other configurations; the log-time column is missing where a concept was not printed as an improvement.",
+    "Not investigated: the log mismatch in the stored G1 fold 2 run, and why `NAirportsQ2` is empty in the 5-bin KB beyond the edge arithmetic.",
+]
 
 
 def md_table(frame):
