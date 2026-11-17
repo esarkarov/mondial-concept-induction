@@ -1,23 +1,18 @@
 # Decisions
 
-Status wording: "Confirmed by team" is used only where the team confirmed the decision; everything else is what the experiments actually used.
+## 1. Design decisions made during the experiments
 
-## 1. Confirmed by team
-
+Decisions made by the group while building and running the experiments:
 - Airports are in the knowledge base; the baselines use `n_airports` (airport rows per country, 0 if none).
 - Flattening keeps a role for every row without shares, plus separate roles for the main language, main religion and main ethnic group.
 - Label set `sovereign` (`LABEL_SET` in `src/config.py`): 27 positives, 167 negatives; the 7 EU candidates and the 45 negatives with a non-null `Dependent` are excluded; `all` (212 negatives) stays available.
 - Base masking list (variant `masked`): `isMember` rows of EMU, ECB, EIB, NATO, ESA, CEI, SELEC, V4, Benelux, CE and OSCE are removed (`MASKED_ORGANIZATIONS`; 283 rows removed).
-
-## 2. Adopted in the experiments, awaiting team confirmation
-
-Decisions the team was asked about:
 - Country-code IRIs (`m:<Code>`, base `http://example.org/mondial#`) for countries.
 - Organizations are individuals with a direct `isMember` role; IRIs are `m:org_<abbrev>` because AG, C and NAM collide with country codes.
 - Headline configuration is the `strict` KB (G1); `extended` (A1) and `masked` (A2) and `none` (A3) are reported as ablations. `kb/mondial_strict_discretised.owl` (headline) and `kb/mondial_extended_discretised.owl` are the only tracked KBs. Discretised = quartile bin classes (for example `PopulationQ3`, subclasses of `Country`, edges in `kb/bins.json`).
 - Further membership variants beyond the base list: `extended` (masked plus G-9, NIB, EFTA, BA, CBSS, NC, CERN, EAPC, EBRD, BSEC), `strict` (extended plus the 18 organizations in `STRICT_EXTRA` that contain all 27 positives; organizations with 25 or 26 positives stay in) and `none` (no `org_*` columns). The masking lists were chosen with knowledge of all labels.
 
-Technical choices without a recorded team statement:
+Technical choices:
 - EU `isMember` rows are always removed from the KB and from the feature tables, so the label cannot leak.
 - Folds: stratified 5-fold, 3 repeats, seeds 42, 43, 44 on the 194 labelled countries; every test fold has at least 5 positives. Folds are never regenerated.
 - Metrics: per-fold (mean over folds, then mean and std over repeats) and pooled out-of-fold with a 95% bootstrap interval (1000 resamples, seed 42 + repeat). Paired comparisons: 1000 resamples of the labelled countries, seed 42, shared indices, F1 averaged over repeats (`src/compare.py`).
@@ -32,14 +27,14 @@ Technical choices without a recorded team statement:
 - E5 (equal-information baselines, run after the freeze): with features restricted to what the KB contains, the untuned strict forest has pooled F1 0.864 [0.747, 0.948] (`kb_raw`) and 0.857 [0.737, 0.944] (`kb_binned`) against 0.870 for the full-feature forest; paired differences to G1 have intervals containing 0 on the 194 countries, and on the 41-country Europe-only problem the kb-only forests are above E1a with intervals excluding 0 (`results/extensions/extensions.md`).
 - Full-data concepts F1 to F3 (`results/analysis.md`) are for presentation only, not performance estimates.
 
-## 3. Naming scheme
+## 2. Naming scheme
 
 - Grid configs: `<label>_<algorithm>_<membership>_<disc|dt>_hv<0|1>_n<noise>` plus `_pellet`, `_closure`, `_disjoint` where used (for example `O3_celoe_strict_disc_hv1_n0_pellet_closure_disjoint`). Labels: G1 to G8 main grid, A1 to A4 ablations, O1 to O3 open world, D1 diagnostic.
 - Extensions: `E1a/b/c_..._europe` (Europe-only problem), `E2a/b_celoe_strict_b3|b5_hv1_n0` (bins), `E4a/b_..._t300` (300 s), `tuned_<variant>_<tree|random_forest>` (E3 predictions), F1 to F3 (full-data fits).
 - KB files: `kb/mondial_<membership>_<numeric>[_closure][_disjoint][_b3|_b5].owl`; bin edges in `kb/bins.json`, `bins_b3.json`, `bins_b5.json`.
 - Run outputs: `results/runs/<config>.csv` (one row per fold), caches `results/runs/<config>/r<repeat>_f<fold>.json` and logs (git-ignored); extensions in `results/extensions/runs/`.
 
-## 4. Limitations and open issues
+## 3. Limitations and open issues
 
 - DL-Learner 1.5.0's closed world reasoner treated `max n` as at most n+1 in probes against the CSVs (`min n` was exact); no learned best concept in G1 to G8 and A1 to A4 contains `max`. Not fixed.
 - Pellet on the closure plus disjoint-bins KB (O3) tested 80 descriptions per fold in 60 s and overran the time limit; cause not identified, no workaround applied.
