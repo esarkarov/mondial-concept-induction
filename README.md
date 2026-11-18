@@ -1,7 +1,5 @@
 # Concept induction on Mondial with DL-Learner
 
-University project, Symbolic Learning course (M1 Data Science & AI).
-
 ## 1. Overview
 
 - Task: learn a description logic concept that characterises European Union member countries in the Mondial knowledge base, and compare it with decision tree and random forest baselines.
