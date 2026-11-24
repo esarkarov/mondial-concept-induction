@@ -25,19 +25,36 @@ pip install -r requirements.txt
 
 ## 3. Repository layout
 
-```
-data/raw/        Mondial SQL files
-data/processed/  CSVs, labels, folds, features (most generated and git-ignored; labels and folds tracked)
-src/             pipeline: export, labels, folds, features, KB builder, conf writer, harness, grid, comparison, analysis, extensions
-baselines/       decision tree / random forest baselines (run_baselines.py, run_tuned.py)
-scripts/         DL-Learner wrapper, scorer (Python + Java), consistency checks, smoke run
-kb/              generated .owl files (only mondial_strict_discretised.owl and mondial_extended_discretised.owl are tracked) and bins*.json
-conf/            smoke_load*.conf (tracked); conf/generated/ holds generated confs (git-ignored)
-results/         result tables (tracked .md/.csv; run caches and logs are git-ignored)
-results/extensions/  outputs of the extensions E1 to E4
-report/, slides/ Mondial schema PDFs; report and slides not written yet
-tools/           DL-Learner distribution (manual download, git-ignored)
-```
+| Path                  | Purpose                                                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `data/raw/`           | Mondial SQL files (`mondial-schema.psql`, `mondial-inputs.psql`)                                                    |
+| `data/processed/`     | CSVs, labels, folds, features (mostly generated; labels and folds are tracked)                                      |
+| `src/`                | Pipeline: export, labels, folds, features, KB builder, conf writer, harness, grid, comparison, analysis, extensions |
+| `baselines/`          | Decision tree and random forest baselines (`run_baselines.py`, `run_tuned.py`, `run_kbonly.py`)                     |
+| `scripts/`            | DL-Learner wrapper, scorer (Python and Java), consistency checks, smoke run                                         |
+| `kb/`                 | Generated `.owl` files and `bins*.json` (only the strict and extended discretised KBs are tracked)                  |
+| `conf/`               | `smoke_load*.conf`; `conf/generated/` holds the generated DL-Learner `.conf` files                                  |
+| `results/`            | Result tables (`.md`, `.csv`); run caches and logs are not tracked                                                  |
+| `results/extensions/` | Outputs of the extensions E1 to E5                                                                                  |
+| `report/`, `slides/`  | Mondial schema PDFs; report and slides not written yet                                                              |
+| `tools/`              | DL-Learner distribution (manual download, not tracked)                                                              |
+
+### Documentation
+
+| Document                           | Content                                                                                         |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `README.md`                        | Overview, setup, repository layout, reproduction steps, limitations, licenses, use of AI        |
+| `DECISIONS.md`                     | Design decisions (dataset, labels, leakage control, KB modelling, experiments) and their status |
+| `requirements.txt`                 | Pinned Python packages                                                                          |
+| `results/grid_main.md`             | Main grid G1 to G8 (algorithm, hasValue, noise)                                                 |
+| `results/grid_ablations.md`        | Ablations A1 to A4 (leakage variants, numeric data properties)                                  |
+| `results/grid_owa.md`              | Open-world runs O1 to O3 (Pellet, closure axioms, disjoint bins)                                |
+| `results/compare.md`               | Paired bootstrap comparisons between configurations and baselines                               |
+| `results/analysis.md`              | Analysis of learned concepts and errors                                                         |
+| `results/extensions/extensions.md` | Extensions E1 to E5 (Europe-only problem, bins, tuning, 300 s, KB-only baselines)               |
+| `results/baselines.csv`            | Decision tree and random forest results on the shared folds                                     |
+| `results/smoke_phase2b.md`         | Smoke run of four DL-Learner configurations                                                     |
+| `results/runs/<config>.csv`        | Per-fold learned concepts and scores for each configuration                                     |
 
 ## 4. How to reproduce
 
@@ -69,22 +86,22 @@ Run from the project root with the virtual environment active. `[ ]` = output fi
 
 ## 5. Results
 
-Result tables are in `results/`: `baselines.csv`, `grid_main.md`, `grid_ablations.md`, `grid_owa.md`, `compare.md`, `analysis.md`, `extensions/extensions.md`, `smoke_phase2b.md`. Per-fold learned concepts are in `results/runs/<config>.csv`. Decisions and their status are in `DECISIONS.md`.
+Result tables are in `results/` (see the documentation table in section 3). Per-fold learned concepts are in `results/runs/<config>.csv`. Decisions and their status are in `DECISIONS.md`.
 
-| Config | What it varies |
-|---|---|
-| G1 to G4 | CELOE on the strict KB: hasValue on/off, noise 0/10 (G1 on/0, G2 on/10, G3 off/0, G4 off/10) |
-| G5 to G8 | the same four settings with OCEL |
-| A1, A2, A3 | G1 settings with the `extended`, `masked` and `none` membership variants |
-| A4 | G1 settings with numeric datatype restrictions instead of bins |
-| O1, O2, O3 | G1 settings with Pellet (open world): normal KB, plus closure axioms, plus disjoint bin classes (repeat 0 only) |
-| D1 | O3 with a 600 s limit, repeat 0 fold 0 (diagnostic) |
-| E1a, E1b, E1c | Europe-only problem (41 countries): strict hasValue on, strict hasValue off, extended hasValue on |
-| E2a, E2b | G1 settings with 3 and 5 quantile bins |
-| E3 | tuned decision tree and random forest (inner 3-fold CV), strict and extended features |
-| E4a, E4b | G1 and G3 settings with a 300 s limit (repeat 0, folds 0 to 4) |
-| E5 | untuned tree/forest on KB-only features (raw or binned numerics, role indicators), 194 countries and the E1 subset |
-| F1, F2, F3 | concepts fitted on all 194 labelled countries (G1, A1, G3 settings), for presentation only |
+| Config        | What it varies                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------ |
+| G1 to G4      | CELOE on the strict KB: hasValue on/off, noise 0/10 (G1 on/0, G2 on/10, G3 off/0, G4 off/10)                       |
+| G5 to G8      | the same four settings with OCEL                                                                                   |
+| A1, A2, A3    | G1 settings with the `extended`, `masked` and `none` membership variants                                           |
+| A4            | G1 settings with numeric datatype restrictions instead of bins                                                     |
+| O1, O2, O3    | G1 settings with Pellet (open world): normal KB, plus closure axioms, plus disjoint bin classes (repeat 0 only)    |
+| D1            | O3 with a 600 s limit, repeat 0 fold 0 (diagnostic)                                                                |
+| E1a, E1b, E1c | Europe-only problem (41 countries): strict hasValue on, strict hasValue off, extended hasValue on                  |
+| E2a, E2b      | G1 settings with 3 and 5 quantile bins                                                                             |
+| E3            | tuned decision tree and random forest (inner 3-fold CV), strict and extended features                              |
+| E4a, E4b      | G1 and G3 settings with a 300 s limit (repeat 0, folds 0 to 4)                                                     |
+| E5            | untuned tree/forest on KB-only features (raw or binned numerics, role indicators), 194 countries and the E1 subset |
+| F1, F2, F3    | concepts fitted on all 194 labelled countries (G1, A1, G3 settings), for presentation only                         |
 
 ## 6. Known limitations
 
@@ -99,3 +116,7 @@ Result tables are in `results/`: `baselines.csv`, `grid_main.md`, `grid_ablation
 
 - Mondial database: Creative Commons Attribution 3.0 (CC BY 3.0); attribute it to its authors (Wolfgang May, University of Göttingen; author name from memory, not verified). The license terms were taken from the task statement and were not re-checked at the source (not verified).
 - DL-Learner 1.5.0: GNU General Public License v3 (the `LICENSE` file of the distribution); the distribution is not redistributed in this repository.
+
+## 8. Use of AI tools
+
+Claude (Anthropic) was used as a coding and writing assistant during this project: for planning and reviewing the modelling and experiment design, for drafting and reviewing code and scripts, and for drafting text such as this README and the report. All experiments were run by the authors, and the reported numbers come from the result tables produced by the scripts above. The authors reviewed and are responsible for the code and the text.
