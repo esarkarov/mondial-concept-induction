@@ -36,7 +36,7 @@ pip install -r requirements.txt
 | `conf/`               | `smoke_load*.conf`; `conf/generated/` holds the generated DL-Learner `.conf` files                                  |
 | `results/`            | Result tables (`.md`, `.csv`); run caches and logs are not tracked                                                  |
 | `results/extensions/` | Outputs of the extensions E1 to E5                                                                                  |
-| `report/`, `slides/`  | Mondial schema PDFs; report and slides not written yet                                                              |
+| `report/`, `slides/`  | project report and presentation files                                                                               |
 | `tools/`              | DL-Learner distribution (manual download, not tracked)                                                              |
 
 ### Documentation
