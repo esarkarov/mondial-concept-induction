@@ -7,7 +7,7 @@
 - Labels: 27 positives (`isMember` of type `member` for `EU`) and 167 negatives (all other sovereign countries); the 7 EU candidates and 45 dependent territories are excluded.
 - Leakage control: membership rows of the EU and of organizations that reveal EU membership are removed from the KB (variants `masked`, `extended`, `strict`, `none`; see `src/config.py`).
 - Method: stratified 5-fold cross-validation repeated 3 times on the 194 labelled countries; DL-Learner 1.5.0 (CELOE, OCEL) learns on the training folds only, concepts are scored on the held-out fold with DL-Learner's own reasoner; baselines use the same folds.
-- Deliverables: `.owl` KB, code, DL-Learner `.conf` files (generated), baselines, result tables; report and slides are not written yet.
+- Deliverables: `.owl` KB, code, DL-Learner `.conf` files (generated), baselines, result tables; the report is in `report/` (`.docx` and `.pdf`); slides are not part of the archive.
 
 ## 2. Requirements and setup (Windows, PowerShell)
 
